@@ -71,7 +71,7 @@ class pionCalibImpl : public edm::EDAnalyzer {
 		unsigned long int event_;
 
 		InputTag scalerSrc_;
-		InputTag uctDigis_;
+		InputTag l1Digis_;
 		InputTag pvSrc_;
 		InputTag ecalSrc_;
 		InputTag hcalSrc_;
@@ -103,7 +103,7 @@ class pionCalibImpl : public edm::EDAnalyzer {
 		vector<double> TPGSFp_;
 		vector<double> TPGSFp1_;
 
-		//Handle<L1CaloRegionCollection> newRegions;
+		Handle<L1CaloRegionCollection> newRegions;
 		Handle<L1CaloEmCollection> newEMCands;
 		Handle<LumiScalersCollection> lumiScalers;
 		Handle<reco::VertexCollection> vertices;
@@ -127,6 +127,7 @@ class pionCalibImpl : public edm::EDAnalyzer {
 		vector<vector<unsigned int>> hCorrTowerETCode;
 };
 
+// THESE ARE IN HELPERS-- this is a reference
 //double getPhiTPG(int iPhi) {
 // TPG iPhi starts at 1 and goes to 72.  Let's index starting at zero.
 //	return convertTPGPhi(iPhi-1);
@@ -218,8 +219,8 @@ void pionCalibImpl::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 	//edm::Handle<L1CaloRegionCollection>::const_iterator newRegion;
 
 	evt.getByLabel(scalerSrc_, lumiScalers);
-//	evt.getByLabel("uctDigis", newRegions);
-	evt.getByLabel("uctDigis", newEMCands);
+	evt.getByLabel("l1Digis", newRegions);
+	evt.getByLabel("l1Digis", newEMCands);
 	evt.getByLabel(pvSrc_, vertices);
 	evt.getByLabel(ecalSrc_, ecal);
 	evt.getByLabel(hcalSrc_, hcal);
@@ -343,7 +344,6 @@ void pionCalibImpl::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 			hTowerETCode[hniphi][hnieta] = energy;
 			TPGSum_ +=energy;
 			TPGH_ += energy;
-			//p
 			/*
 			   if(energy<10){hetbin=0;}
 			   else if(energy<15){hetbin=1;}

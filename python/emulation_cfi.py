@@ -13,8 +13,8 @@ import FWCore.ParameterSet.Config as cms
 from Configuration.StandardSequences.RawToDigi_Data_cff import *
 from L1Trigger.LauraTriggerTools.Lut import *
 
-
-uctDigis = cms.EDProducer(
+'''This remakes L1 regions'''
+l1Digis = cms.EDProducer(
     "L1RCTProducer",
     hcalDigis = cms.VInputTag(cms.InputTag("hcalDigis")),
     useEcal = cms.bool(True),
@@ -27,7 +27,7 @@ uctDigis = cms.EDProducer(
 )
 
 
-uctDigiStep = cms.Sequence(
+l1DigiStep = cms.Sequence(
     # Only do the digitization of objects that we care about
     #RawToDigi
     gctDigis
@@ -37,7 +37,4 @@ uctDigiStep = cms.Sequence(
 )
 
 
-#emulationSequence = cms.Sequence(uctDigiStep * uctEmulatorStep)
-
-emulationSequence = cms.Sequence(uctDigiStep * uctDigis)
-#used in 
+emulationSequence = cms.Sequence(l1DigiStep * l1Digis)

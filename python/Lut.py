@@ -9,24 +9,24 @@ from L1TriggerConfig.RCTConfigProducers.L1RCTConfig_cff import *
 
 
 # Internal RCT LSBs
-RCTConfigProducers.eGammaLSB = 0.5
-RCTConfigProducers.jetMETLSB = 0.5 # Determines what scale the UCT sees for regions/jets
+#RCTConfigProducers.eGammaLSB = 0.5
+#RCTConfigProducers.jetMETLSB = 0.5 # Determines what scale the UCT sees for regions/jets
 #RCTConfigProducers.eMinForFGCut = 999.
 #RCTConfigProducers.eMaxForFGCut = -999.
-RCTConfigProducers.eMinForFGCut = 6
-RCTConfigProducers.eMaxForFGCut = 999.
-RCTConfigProducers.hOeCut = 0.05
+#RCTConfigProducers.eMinForFGCut = 6
+#RCTConfigProducers.eMaxForFGCut = 999.
+#RCTConfigProducers.hOeCut = 0.05
 #RCTConfigProducers.eMinForHoECut = 999.
 #RCTConfigProducers.eMaxForHoECut = -999.
-RCTConfigProducers.eMinForHoECut = 1
-RCTConfigProducers.eMaxForHoECut = 30
+#RCTConfigProducers.eMinForHoECut = 1
+#RCTConfigProducers.eMaxForHoECut = 30
 #RCTConfigProducers.hMinForHoECut = 999.
-RCTConfigProducers.hMinForHoECut = 1.0
+#RCTConfigProducers.hMinForHoECut = 1.0
 #RCTConfigProducers.eActivityCut = 2
 #RCTConfigProducers.hActivityCut = 0.5
-RCTConfigProducers.hActivityCut = 4.0
-RCTConfigProducers.eActivityCut = 4.0
-RCTConfigProducers.eicIsolationThreshold = 4
+#RCTConfigProducers.hActivityCut = 4.0
+#RCTConfigProducers.eActivityCut = 4.0
+#RCTConfigProducers.eicIsolationThreshold = 4
 
 #l1CaloScales.L1CaloEmEtScaleLSB = 0.5 # must be the same as egammaLSB
 

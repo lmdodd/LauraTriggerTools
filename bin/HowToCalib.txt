@@ -1,0 +1,17 @@
+The TPG calibration:
+
+
+A 5x5 tpg region
+a reco/gen object
+
+
+ECAL tpg requires two corrections. first uncorrected, then corrected and then
+twice
+
+Apply ECAL tpg corrections pt dependent
+
+correct again (not pt dependent(?))
+
+then apply HCAL tpg corrections (pt dependent)
+
+

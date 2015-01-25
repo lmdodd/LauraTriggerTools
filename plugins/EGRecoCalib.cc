@@ -1,7 +1,7 @@
 /*
  * =====================================================================================
  *
- *       Filename:  pionCalibReco.cc
+ *       Filename:  EGRecoCalib.cc
  *
  *    Description:  
  *
@@ -52,9 +52,9 @@ using namespace std;
 using namespace edm;
 
 
-class pionCalibReco : public edm::EDAnalyzer {
+class EGRecoCalib : public edm::EDAnalyzer {
 	public:
-		explicit pionCalibReco(const edm::ParameterSet& pset);
+		explicit EGRecoCalib(const edm::ParameterSet& pset);
 		static const unsigned int N_TOWER_PHI;
 		static const unsigned int N_TOWER_ETA;
 	private:
@@ -66,6 +66,11 @@ class pionCalibReco : public edm::EDAnalyzer {
 
 
 		TTree* tree;
+		vector<Float_t>* pts_;
+                vector<Float_t>* etas_;
+                vector<Float_t>* phis_;
+
+
 		unsigned int run_;
 		unsigned int lumi_;
 		unsigned long int event_;
@@ -84,13 +89,10 @@ class pionCalibReco : public edm::EDAnalyzer {
 		float egCand1Eta_;
 		float egCand1Phi_;
 
-		float egCand2Pt_;
-		float egCand2Eta_;
-		float egCand2Phi_;
 
 		float instLumi_;
 		int TPGSum_;
-		int TPGDiff_;
+		int TPGVeto_;
 		int TPGE_;
 		int cTPGE_;
 		int TPGH_;
@@ -138,31 +140,31 @@ class pionCalibReco : public edm::EDAnalyzer {
 
 namespace {
 
- // Predicate to sort candidates by descending pt
- class CandPtSorter {
-  public:
-   bool operator()(const reco::Candidate* candA, const reco::Candidate* candB)
-    const {
-     return candA->pt() > candB->pt();
-    }
- };
+	// Predicate to sort candidates by descending pt
+	class CandPtSorter {
+		public:
+			bool operator()(const reco::Candidate* candA, const reco::Candidate* candB)
+				const {
+					return candA->pt() > candB->pt();
+				}
+	};
 
- // Turn a set of VInputTags into a colleciton of candidate pointers.
- std::vector<const reco::Candidate*> getCollections(
-   const edm::Event& evt, const VInputTag& collections) {
-  std::vector<const reco::Candidate*> output;
-  // Loop over collections
-  for (size_t i = 0; i < collections.size(); ++i) {
-   edm::Handle<edm::View<reco::Candidate> > handle;
-   evt.getByLabel(collections[i], handle);
-   // Loop over objects in current collection
-   for (size_t j = 0; j < handle->size(); ++j) {
-    const reco::Candidate& object = handle->at(j);
-    output.push_back(&object);
-   }
-  }
-  return output;
- }
+	// Turn a set of VInputTags into a colleciton of candidate pointers.
+	std::vector<const reco::Candidate*> getCollections(
+			const edm::Event& evt, const VInputTag& collections) {
+		std::vector<const reco::Candidate*> output;
+		// Loop over collections
+		for (size_t i = 0; i < collections.size(); ++i) {
+			edm::Handle<edm::View<reco::Candidate> > handle;
+			evt.getByLabel(collections[i], handle);
+			// Loop over objects in current collection
+			for (size_t j = 0; j < handle->size(); ++j) {
+				const reco::Candidate& object = handle->at(j);
+				output.push_back(&object);
+			}
+		}
+		return output;
+	}
 
 }
 // THESE ARE IN HELPERS-- this is a reference
@@ -194,20 +196,25 @@ namespace {
 //	return convertTPGEta(iEta);
 //}
 
-unsigned int const pionCalibReco::N_TOWER_PHI = 72;
-unsigned int const pionCalibReco::N_TOWER_ETA = 56;
+unsigned int const EGRecoCalib::N_TOWER_PHI = 72;
+unsigned int const EGRecoCalib::N_TOWER_ETA = 56;
 
-pionCalibReco::pionCalibReco(const edm::ParameterSet& pset):
+EGRecoCalib::EGRecoCalib(const edm::ParameterSet& pset):
 	eTowerETCode(N_TOWER_PHI, vector<unsigned int>(N_TOWER_ETA)),
 	eCorrTowerETCode(N_TOWER_PHI, vector<unsigned int>(N_TOWER_ETA)),
 	hTowerETCode(N_TOWER_PHI, vector<unsigned int>(N_TOWER_ETA)),
 	hCorrTowerETCode(N_TOWER_PHI, vector<unsigned int>(N_TOWER_ETA))
 {
+
+	 pts_ = new std::vector<Float_t>();
+	 etas_ = new std::vector<Float_t>();
+	 phis_ = new std::vector<Float_t>();
+
 	// Initialize the ntuple builder
 	edm::Service<TFileService> fs;
 	tree = fs->make<TTree>("Ntuple", "Ntuple");
 	tree->Branch("TPGSum", &TPGSum_, "TPGSum/i");
-	tree->Branch("TPGDiff", &TPGDiff_, "TPGDiff/i");
+	tree->Branch("TPGVeto", &TPGVeto_, "TPGVeto/i");
 	tree->Branch("TPGH", &TPGH_, "TPGH_/i");
 	tree->Branch("cTPGH", &cTPGH_, "cTPGH_/i");
 	tree->Branch("TPGE", &TPGE_, "TPGE/i");
@@ -225,12 +232,15 @@ pionCalibReco::pionCalibReco(const edm::ParameterSet& pset):
 	tree->Branch("evt", &event_, "evt/l");
 	tree->Branch("npvs", &npvs_, "npvs/i");
 	tree->Branch("instlumi", &instLumi_, "instlumi/F");
-	tree->Branch("maxEg2x1Pt", &maxEg2x1Pt_, "maxEg2x1Pt/F");
+        tree->Branch("recoPt", "std::vector<float>", &pts_);
+        tree->Branch("recoGctEta", "std::vector<float>", &etas_);
+        tree->Branch("recoGctPhi", "std::vector<float>", &phis_);
+        tree->Branch("maxEg2x1Pt", &maxEg2x1Pt_, "maxEg2x1Pt/F");
 
 	scalerSrc_ = pset.exists("scalerSrc") ? pset.getParameter<InputTag>("scalerSrc") : InputTag("scalersRawToDigi");
 	pvSrc_ = pset.exists("pvSrc") ? pset.getParameter<InputTag>("pvSrc") : InputTag("offlinePrimaryVertices");
 	// Input variables
-        recoSrc_ = pset.getParameter<VInputTag>("recoSrc");
+	recoSrc_ = pset.getParameter<VInputTag>("recoSrc");
 	ecalSrc_ = pset.exists("ecalSrc") ? pset.getParameter<InputTag>("ecalSrc"): InputTag("ecalDigis:EcalTriggerPrimitives");
 	hcalSrc_ = pset.exists("hcalSrc") ? pset.getParameter<InputTag>("hcalSrc"): InputTag("hcalDigis");
 	TPGSF1_= pset.getParameter<vector<double> >("TPGSF1");//calibration tables
@@ -244,12 +254,11 @@ pionCalibReco::pionCalibReco(const edm::ParameterSet& pset):
 }
 
 
-void pionCalibReco::analyze(const edm::Event& evt, const edm::EventSetup& es) {
+void EGRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 	// Setup meta info
 	run_ = evt.id().run();
 	lumi_ = evt.id().luminosityBlock();
 	event_ = evt.id().event();
-
 	evt.getByLabel(scalerSrc_, lumiScalers);
 	evt.getByLabel("l1Digis", newRegions);
 	evt.getByLabel("l1Digis", newEMCands);
@@ -269,20 +278,24 @@ void pionCalibReco::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 
 
 
- std::vector<const reco::Candidate*> objects = getCollections(
-   evt, recoSrc_);
+	std::vector<const reco::Candidate*> objects = getCollections(
+			evt, recoSrc_);
 
- std::sort(objects.begin(), objects.end(), CandPtSorter());
+	std::sort(objects.begin(), objects.end(), CandPtSorter());
 
 
 	//Reset important things
 	std::cout<<"Reset important things"<<std::endl;
+	pts_->clear();
+	etas_->clear();
+	phis_->clear();
+
 
 	maxEg2x1Pt_ = 0;
 
 
 	TPGSum_ = 0;
-	TPGDiff_ = 0;
+	TPGVeto_ = 0;
 
 
 	TPGE_ =0;
@@ -312,6 +325,14 @@ void pionCalibReco::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 	int maxTPGEPt_eta = 999;
 
 
+
+	// std::cout<<"Reco Objects!"<<std::endl;
+	 for (size_t i = 0; i < objects.size(); ++i) {
+	//  std::cout<<objects[i]->pt()<<"   "<<objects[i]->eta()<<"   "<<objects[i]->phi()<<std::endl;
+	  pts_->push_back(objects[i]->pt());
+	  etas_->push_back(objects[i]->eta());
+	  phis_->push_back(objects[i]->phi());
+	 }
 
 
 	//std::cout << "TPGS" << std::endl;
@@ -352,13 +373,13 @@ void pionCalibReco::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 		eCorrTowerETCode[iphi][ieta] = alpha*et;
 		cTPGE_ +=alpha*et;
 		//		if (et>0){cout<<"eTowerETCode: "<<eTowerETCode[iphi][ieta]<<endl;}
-	//	if ((*ecal)[i].compressedEt() > 0) {
-			//			std::cout << "ecal eta/phi=" << ieta << "/" << iphi
-			//				<< " = (" << getEtaTPG(cal_ieta) << "/" << getPhiTPG(cal_iphi) << ") "
-			//				<< " et="<< (*ecal)[i].compressedEt()*egLSB_ << " fg=" << (*ecal)[i].fineGrain()
-			//				<< " rctEta="<< twrEta2RegionEta(ieta) << " rctPhi=" << twrPhi2RegionPhi(cal_iphi)
-			//				<< std::endl;
-	//	}
+		//	if ((*ecal)[i].compressedEt() > 0) {
+		//			std::cout << "ecal eta/phi=" << ieta << "/" << iphi
+		//				<< " = (" << getEtaTPG(cal_ieta) << "/" << getPhiTPG(cal_iphi) << ") "
+		//				<< " et="<< (*ecal)[i].compressedEt()*egLSB_ << " fg=" << (*ecal)[i].fineGrain()
+		//				<< " rctEta="<< twrEta2RegionEta(ieta) << " rctPhi=" << twrPhi2RegionPhi(cal_iphi)
+		//				<< std::endl;
+		//	}
 		if (et>maxTPGEPt){
 			maxTPGEPt=et;
 			maxTPGEPt_phi = iphi; //this one starts at 0-72
@@ -405,12 +426,12 @@ void pionCalibReco::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 			cTPGH_ += alpha_h*energy;
 
 			//if (energy > 0) {
-				//				std::cout << "hcal eta/phi=" << ieta << "/" << iphi
-				//					<< " = (" << getEtaTPG(ieta) << "/" << getPhiTPG(iphi) << ") "
-				//					<< " et=" << (*hcal)[i].SOI_compressedEt()
-				//					<< " energy=" << energy
-				//					<< " rctEta="<< twrEta2RegionEta(hnieta) << " rctPhi=" << twrPhi2RegionPhi(hniphi)
-				//					<< " fg=" << (*hcal)[i].SOI_fineGrain() << std::endl;
+			//				std::cout << "hcal eta/phi=" << ieta << "/" << iphi
+			//					<< " = (" << getEtaTPG(ieta) << "/" << getPhiTPG(iphi) << ") "
+			//					<< " et=" << (*hcal)[i].SOI_compressedEt()
+			//					<< " energy=" << energy
+			//					<< " rctEta="<< twrEta2RegionEta(hnieta) << " rctPhi=" << twrPhi2RegionPhi(hniphi)
+			//					<< " fg=" << (*hcal)[i].SOI_fineGrain() << std::endl;
 			//}
 			if (energy>maxTPGHPt){
 				maxTPGHPt=energy;
@@ -462,8 +483,8 @@ void pionCalibReco::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 		}
 	}
 
-	if (maxTPGPt>0.9*(TPGH_+TPGE_)){TPGDiff_=1;}//Only look at tpgs where 90% is in central tpg
-						    //This works for gen studies probably not reco studies 
+	if (maxTPGPt>0.9*(TPGH_+TPGE_)){TPGVeto_=1;}//Only look at tpgs where 90% is in central tpg
+	//This works for gen studies probably not reco studies 
 
 	//std::cout<<"egt Cand"<<std::endl;
 	for(L1CaloEmCollection::const_iterator egtCand =
@@ -483,4 +504,4 @@ void pionCalibReco::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 }
 
 #include "FWCore/Framework/interface/MakerMacros.h"
-DEFINE_FWK_MODULE(pionCalibReco);
+DEFINE_FWK_MODULE(EGRecoCalib);

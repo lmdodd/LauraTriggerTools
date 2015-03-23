@@ -56,9 +56,9 @@ RCTConfigProducers.eGammaHCalScaleFactors = [0., 0., 0., 0., 0.,
 
 
 #Apply ecal calibrations to EG object
-#RCTConfigProducers.eGammaECalScaleFactors = eg_calib_v1
-#RCTConfigProducers.eGammaECalScaleFactors = NoTwrCalib_ptdep
-RCTConfigProducers.eGammaECalScaleFactors = LD_ecal_calib_v1_veto
+#RCTConfigProducers.eGammaECalScaleFactors = eg_calib_v3
+RCTConfigProducers.eGammaECalScaleFactors = NoTwrCalib_ptdep
+#RCTConfigProducers.eGammaECalScaleFactors = LD_ecal_calib_v1_veto
 
 
 # We want the same scales for EG and region paths
@@ -69,8 +69,8 @@ RCTConfigProducers.jetMETECalScaleFactors = RCTConfigProducers.eGammaECalScaleFa
 
 # HSums
 #Hcal calibrations to regions/jets
-#RCTConfigProducers.jetMETHCalScaleFactors = NoTwrCalib_ptdep
-RCTConfigProducers.jetMETHCalScaleFactors = LD_hcal_calib_v3_veto
+RCTConfigProducers.jetMETHCalScaleFactors = NoTwrCalib_ptdep
+#RCTConfigProducers.jetMETHCalScaleFactors = LD_hcal_calib_v3_veto
 
 
 

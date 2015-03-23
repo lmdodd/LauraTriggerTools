@@ -81,8 +81,18 @@ else:
     process.load("L1Trigger.LauraTriggerTools.emulation_cfi")
     #process.load("LauraTriggerTools.emulationMC_cfi")
 process.load("L1Trigger.LauraTriggerTools.recoObjects_cfi")
-#process.load("L1Trigger.LauraTriggerTools.recoObjects53X_cfi")
 process.load("Configuration.Geometry.GeometryIdeal_cff")
+
+# Determine which calibration to use
+from L1Trigger.LauraTriggerTools.emulation_cfi import \
+        eg_calib_v1, eg_calib_v3, eg_calib_v4
+
+calib_map = {
+    'CALIB_V1': eg_calib_v1,
+    'CALIB_V3': eg_calib_v3,
+    'CALIB_V4': eg_calib_v4
+}
+
 
 # Read inst. lumi. info from the scalers
 process.load("EventFilter.ScalersRawToDigi.ScalersRawToDigi_cfi")
@@ -96,23 +106,16 @@ common_ntuple_branches = cms.PSet(
 
 # Tree producers
 process.tree = cms.EDAnalyzer(
-    "EGRecoCalib",
+    "pionCalibReco",
     recoSrc = cms.VInputTag("recoElecs"),
-    TPGSF1 = TPG_SF_1_227,
-    #TPGSF1 = TPG_SF_v1_veto,
-    TPGSF2 = TPG_SF_2_227,
-    TPGSFp = TPG_SF_v3_off,
-    #TPGSFp = TPG_SF_3_veto,
+    TPGSF1 = TPG_SF_1_veto,
+    TPGSF2 = TPG_SF_v2_off,
+    TPGSFp = TPG_SF_3_veto,
     TPGSFp1 = TPG_SF_v3_off,
     regionLSB = cms.double(0.5),
     egammaLSB = cms.double(1.0), # This has to correspond with the value from L1CaloEmThreshold
     egammaSeed = cms.int32(2),	
-    ECALOn = cms.bool(True),	
-    v_off = cms.bool(False),	
-    v1 = cms.bool(False),	
-    v2 = cms.bool(True),	
-    v3 = cms.bool(False),	
-    v4 = cms.bool(False)
+    ECALOn = cms.bool(False)	
 )
 
 reco_step=process.recoObjects

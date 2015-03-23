@@ -8,8 +8,10 @@ Authors: Laura
 '''
 
 import FWCore.ParameterSet.Config as cms
+
+
 from Configuration.StandardSequences.RawToDigi_Data_cff import *
-from L1Trigger.LauraTriggerTools.Lut import *
+from L1Trigger.LauraTriggerTools.Lut2012 import *
 
 '''This remakes L1 regions'''
 l1Digis = cms.EDProducer(

@@ -6,14 +6,12 @@ from L1Trigger.LauraTriggerTools.TPG_cfi import *
 from FWCore.ParameterSet.VarParsing import VarParsing
 options = VarParsing ('analysis')
 # Set useful defaults
-#options.inputFiles = 'file:/nfs_scratch/laura/pion0test.root'
-#options.inputFiles = 'file:/hdfs/store/user/laura/SinglePi0Pt30/SinglePi0Pt30-0093.root'
-#options.inputFiles = '/store/user/laura/SinglePiPlusPt20/SinglePiPlusPt20-0093.root'
-options.inputFiles = 'file:/hdfs/store/user/laura/2012-08-01-CRAB_ZEESkim/skim_12_1_oNf.root'
+#options.inputFiles = 'file:/hdfs/store/user/laura/2012-08-01-CRAB_ZEESkim/skim_12_1_oNf.root'
+options.inputFiles = 'file:/hdfs/store/user/laura/MuTauSkim/skim_12_1_8i7.root'
 #soon to be data
 #options.inputFiles = '/store/user/laura/SinglePiPlusPt20/SinglePiPlusPt20-0093.root'
 
-options.outputFile = "tpg_eg_verification.root"
+options.outputFile = "tpg_tau_verification.root"
 #options.outputFile = "tpg_hcal_verification.root"
 
 
@@ -80,37 +78,29 @@ if not options.isMC:
 else:
     process.load("L1Trigger.LauraTriggerTools.emulation_cfi")
     #process.load("LauraTriggerTools.emulationMC_cfi")
-process.load("L1Trigger.LauraTriggerTools.recoObjects_cfi")
-#process.load("L1Trigger.LauraTriggerTools.recoObjects53X_cfi")
+process.load("L1Trigger.LauraTriggerTools.recoObjects53X_cfi")
 process.load("Configuration.Geometry.GeometryIdeal_cff")
 
 # Read inst. lumi. info from the scalers
 process.load("EventFilter.ScalersRawToDigi.ScalersRawToDigi_cfi")
 process.scalersRawToDigi.scalersInputTag = 'rawDataCollector'
 
-common_ntuple_branches = cms.PSet(
-#    index = cms.string("index"), # Index of reco object in the event
-#    nRecoObjects = cms.string("nTotalObjects"), # Number of reco objects in the event
-#    nPVs = cms.string("nPVs"), # number of reco'ed vertices in the event
-)
-
 # Tree producers
 process.tree = cms.EDAnalyzer(
     "EGRecoCalib",
-    recoSrc = cms.VInputTag("recoElecs"),
-    TPGSF1 = TPG_SF_1_227,
-    #TPGSF1 = TPG_SF_v1_veto,
-    TPGSF2 = TPG_SF_2_227,
+    recoSrc = cms.VInputTag("recoTaus"),
+    TPGSF1 = TPG_SF_1_veto,
+    TPGSF2 = TPG_SF_v2_int,
     TPGSFp = TPG_SF_v3_off,
     #TPGSFp = TPG_SF_3_veto,
     TPGSFp1 = TPG_SF_v3_off,
     regionLSB = cms.double(0.5),
     egammaLSB = cms.double(1.0), # This has to correspond with the value from L1CaloEmThreshold
     egammaSeed = cms.int32(2),	
-    ECALOn = cms.bool(True),	
+    ECALOn = cms.bool(False),	
     v_off = cms.bool(False),	
-    v1 = cms.bool(False),	
-    v2 = cms.bool(True),	
+    v1 = cms.bool(True),	
+    v2 = cms.bool(False),	
     v3 = cms.bool(False),	
     v4 = cms.bool(False)
 )
@@ -131,5 +121,8 @@ process.load("FWCore.MessageLogger.MessageLogger_cfi")
 process.MessageLogger.cerr.FwkReport.reportEvery = 100
 
 # Spit out filter efficiency at the end.
-process.options = cms.untracked.PSet(wantSummary = cms.untracked.bool(True))
-
+process.options = cms.untracked.PSet(
+   wantSummary = cms.untracked.bool(True)
+   #wantSummary = cms.untracked.bool(True),
+   #SkipEvent = cms.untracked.vstring('ProductNotFound')
+)

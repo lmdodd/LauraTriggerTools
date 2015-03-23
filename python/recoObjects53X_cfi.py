@@ -11,7 +11,7 @@ Authors: Laura Dodd, Nate Woods, Maria Cepeda, Evan Friis (UW Madison)
 
 
 #########################################################################
-##-------- Find Isolated Muons and Electrons
+##-------- Find Isolated Electrons
 
 
 recoElecs = cms.EDFilter(
@@ -31,9 +31,78 @@ recoElecs = cms.EDFilter(
 
 
 
-recoObjects = cms.Sequence(
-    recoElecs 
+
+##-------- Find Isolated Taus     
+# Rerun the PFTau sequence
+from Configuration.StandardSequences.MagneticField_cff import *
+from RecoTauTag.Configuration.RecoPFTauTag_cff import *
+
+# Select good taus
+dmTaus = cms.EDFilter(
+    "PFTauSelector",
+    src = cms.InputTag("hpsPFTauProducer"),
+    #cut = cms.string("pt > 10 & abs(eta) < 2.5"),
+    cut = cms.string("pt > 10 & abs(eta) < 2.5"),
+    discriminators = cms.VPSet(
+        cms.PSet(
+            discriminator=cms.InputTag("hpsPFTauDiscriminationByDecayModeFinding"),
+            selectionCut=cms.double(0.5)
+        ),
+    ),
+    filter = cms.bool(False)
 )
+
+isoTaus = cms.EDFilter(
+    "PFTauSelector",
+    src = cms.InputTag("hpsPFTauProducer"),
+    cut = cms.string("pt > 10 & abs(eta) < 2.5"),
+    #cut = cms.string("pt > 10 & abs(eta) < 2.5"),
+    discriminators = cms.VPSet(
+        cms.PSet(
+            discriminator=cms.InputTag("hpsPFTauDiscriminationByDecayModeFinding"),
+            selectionCut=cms.double(0.5)
+        ),
+        cms.PSet(
+            discriminator=cms.InputTag("hpsPFTauDiscriminationByLooseIsolationDBSumPtCorr"),
+            selectionCut=cms.double(0.5)
+        ),
+    ),
+    filter = cms.bool(False)
+)
+
+recoTaus = cms.EDFilter(
+    "PFTauSelector",
+    src = cms.InputTag("hpsPFTauProducer"),
+    cut = cms.string("pt > 10 & abs(eta) < 2.5"),
+    discriminators = cms.VPSet(
+        cms.PSet(
+            discriminator=cms.InputTag("hpsPFTauDiscriminationByDecayModeFinding"),
+            selectionCut=cms.double(0.5)
+        ),
+        cms.PSet(
+            discriminator=cms.InputTag("hpsPFTauDiscriminationByLooseIsolationDBSumPtCorr"),
+            selectionCut=cms.double(0.5)
+        ),
+        cms.PSet(
+            discriminator=cms.InputTag("hpsPFTauDiscriminationByLooseMuonRejection"),
+            selectionCut=cms.double(0.5)
+        ),
+        cms.PSet(
+            discriminator=cms.InputTag("hpsPFTauDiscriminationByLooseElectronRejection"),
+            selectionCut=cms.double(0.5)
+        ),
+    ),
+    filter = cms.bool(False)
+)
+
+
+recoObjects = cms.Sequence(
+    recoElecs*
+    recoTauClassicHPSSequence *
+    dmTaus *
+    isoTaus*
+    recoTaus
+) 
 
 
 recoObjects_truthMatched = cms.Sequence(

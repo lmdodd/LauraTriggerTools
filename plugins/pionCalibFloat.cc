@@ -1,7 +1,7 @@
 /*
  * =====================================================================================
  *
- *       Filename:  pionCalibImpl.cc
+ *       Filename:  pionCalibFloat.cc
  *
  *    Description:  
  *
@@ -44,17 +44,14 @@
 #include "FWCore/Framework/interface/ESHandle.h"
 
 
-//typedef std::vector<edm::InputTag> VInputTag;
-//typedef std::vector<unsigned int> PackedUIntCollection;
-
 
 using namespace std;
 using namespace edm;
 
 
-class pionCalibImpl : public edm::EDAnalyzer {
+class pionCalibFloat : public edm::EDAnalyzer {
 	public:
-		explicit pionCalibImpl(const edm::ParameterSet& pset);
+		explicit pionCalibFloat(const edm::ParameterSet& pset);
 		static const unsigned int N_TOWER_PHI;
 		static const unsigned int N_TOWER_ETA;
 	private:
@@ -122,10 +119,10 @@ class pionCalibImpl : public edm::EDAnalyzer {
 
 		double LSB = 0.5;
 
-		vector<vector<unsigned int>> eTowerETCode;
-		vector<vector<unsigned int>> eCorrTowerETCode;
-		vector<vector<unsigned int>> hTowerETCode;
-		vector<vector<unsigned int>> hCorrTowerETCode;
+		vector<vector<float>> eTowerETCode;
+		vector<vector<float>> eCorrTowerETCode;
+		vector<vector<float>> hTowerETCode;
+		vector<vector<float>> hCorrTowerETCode;
 };
 
 // THESE ARE IN HELPERS-- this is a reference
@@ -157,14 +154,14 @@ class pionCalibImpl : public edm::EDAnalyzer {
 //	return convertTPGEta(iEta);
 //}
 
-unsigned int const pionCalibImpl::N_TOWER_PHI = 72;
-unsigned int const pionCalibImpl::N_TOWER_ETA = 56;
+unsigned int const pionCalibFloat::N_TOWER_PHI = 72;
+unsigned int const pionCalibFloat::N_TOWER_ETA = 56;
 
-pionCalibImpl::pionCalibImpl(const edm::ParameterSet& pset):
-	eTowerETCode(N_TOWER_PHI, vector<unsigned int>(N_TOWER_ETA)),
-	eCorrTowerETCode(N_TOWER_PHI, vector<unsigned int>(N_TOWER_ETA)),
-	hTowerETCode(N_TOWER_PHI, vector<unsigned int>(N_TOWER_ETA)),
-	hCorrTowerETCode(N_TOWER_PHI, vector<unsigned int>(N_TOWER_ETA))
+pionCalibFloat::pionCalibFloat(const edm::ParameterSet& pset):
+	eTowerETCode(N_TOWER_PHI, vector<float>(N_TOWER_ETA)),
+	eCorrTowerETCode(N_TOWER_PHI, vector<float>(N_TOWER_ETA)),
+	hTowerETCode(N_TOWER_PHI, vector<float>(N_TOWER_ETA)),
+	hCorrTowerETCode(N_TOWER_PHI, vector<float>(N_TOWER_ETA))
 {
 	// Initialize the ntuple builder
 	edm::Service<TFileService> fs;
@@ -206,7 +203,7 @@ pionCalibImpl::pionCalibImpl(const edm::ParameterSet& pset):
 }
 
 
-void pionCalibImpl::analyze(const edm::Event& evt, const edm::EventSetup& es) {
+void pionCalibFloat::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 
 	// Setup meta info
 	run_ = evt.id().run();
@@ -425,14 +422,15 @@ void pionCalibImpl::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 
 	if (maxTPGPt>0.9*(TPGH_+TPGE_)){TPGDiff_=1;}
 	if(maxTPGPt<10){ptbin_=0;}
-        else if(maxTPGPt<15){ptbin_=1;}
-        else if(maxTPGPt<20){ptbin_=2;}
-        else if(maxTPGPt<25){ptbin_=3;}
-        else if(maxTPGPt<30){ptbin_=4;}
-        else if(maxTPGPt<35){ptbin_=5;}
-        else if(maxTPGPt<40){ptbin_=6;}
-        else if(maxTPGPt<45){ptbin_=7;}
-        else {ptbin_=8;}
+	else if(maxTPGPt<15){ptbin_=1;}
+	else if(maxTPGPt<20){ptbin_=2;}
+	else if(maxTPGPt<25){ptbin_=3;}
+	else if(maxTPGPt<30){ptbin_=4;}
+	else if(maxTPGPt<35){ptbin_=5;}
+	else if(maxTPGPt<40){ptbin_=6;}
+	else if(maxTPGPt<45){ptbin_=7;}
+	else {ptbin_=8;}
+
 
 
 	std::cout<<"egt Cand"<<std::endl;
@@ -453,4 +451,4 @@ void pionCalibImpl::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 }
 
 #include "FWCore/Framework/interface/MakerMacros.h"
-DEFINE_FWK_MODULE(pionCalibImpl);
+DEFINE_FWK_MODULE(pionCalibFloat);

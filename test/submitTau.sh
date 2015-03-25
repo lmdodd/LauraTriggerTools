@@ -10,6 +10,6 @@ fi
 
 farmoutAnalysisJobs $1 \
   --infer-cmssw-path \
-  --input-file-list=MuTau.txt \
+  --input-file-list=DY20_skim.txt \
   ./makeTauReco.py  \
   'inputFiles=$inputFileNames' 'outputFile=$outputFileName'

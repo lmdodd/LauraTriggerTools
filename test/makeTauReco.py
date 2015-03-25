@@ -7,7 +7,7 @@ from FWCore.ParameterSet.VarParsing import VarParsing
 options = VarParsing ('analysis')
 # Set useful defaults
 #options.inputFiles = 'file:/hdfs/store/user/laura/2012-08-01-CRAB_ZEESkim/skim_12_1_oNf.root'
-options.inputFiles = 'file:/hdfs/store/user/laura/MuTauSkim/skim_12_1_8i7.root'
+options.inputFiles = 'file:/hdfs/store/user/ldodd/DYJetsToLL_M-50_13TeV-pythia6/DYJetsToLL_M-50_13TeV-pythia6_Fall13dr-tsg_PU20bx25_POSTLS162_V2-v1/05a81b8d696d27a5c3c2ca036967addd/skim_4_1_OgG.root'
 #soon to be data
 #options.inputFiles = '/store/user/laura/SinglePiPlusPt20/SinglePiPlusPt20-0093.root'
 
@@ -17,7 +17,7 @@ options.outputFile = "tpg_tau_verification.root"
 
 options.register(
     'isMC',
-    0,
+    1,
     VarParsing.multiplicity.singleton,
     VarParsing.varType.int,
     'Set to 1 for simulated samples - updates GT, emulates HCAL TPGs.')
@@ -73,11 +73,7 @@ process.TFileService = cms.Service(
 )
 
 # Load emulation and RECO sequences
-if not options.isMC:
-    process.load("L1Trigger.LauraTriggerTools.emulation_cfi")
-else:
-    process.load("L1Trigger.LauraTriggerTools.emulation_cfi")
-    #process.load("LauraTriggerTools.emulationMC_cfi")
+process.load("L1Trigger.LauraTriggerTools.emulation_cfi")
 process.load("L1Trigger.LauraTriggerTools.recoObjects53X_cfi")
 process.load("Configuration.Geometry.GeometryIdeal_cff")
 

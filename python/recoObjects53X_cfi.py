@@ -34,14 +34,15 @@ recoElecs = cms.EDFilter(
 
 ##-------- Find Isolated Taus     
 # Rerun the PFTau sequence
+from Configuration.StandardSequences.GeometryIdeal_cff import *
 from Configuration.StandardSequences.MagneticField_cff import *
 from RecoTauTag.Configuration.RecoPFTauTag_cff import *
+from TrackingTools.TransientTrack.TransientTrackBuilder_cfi import * 
 
 # Select good taus
 dmTaus = cms.EDFilter(
     "PFTauSelector",
     src = cms.InputTag("hpsPFTauProducer"),
-    #cut = cms.string("pt > 10 & abs(eta) < 2.5"),
     cut = cms.string("pt > 10 & abs(eta) < 2.5"),
     discriminators = cms.VPSet(
         cms.PSet(
@@ -56,7 +57,6 @@ isoTaus = cms.EDFilter(
     "PFTauSelector",
     src = cms.InputTag("hpsPFTauProducer"),
     cut = cms.string("pt > 10 & abs(eta) < 2.5"),
-    #cut = cms.string("pt > 10 & abs(eta) < 2.5"),
     discriminators = cms.VPSet(
         cms.PSet(
             discriminator=cms.InputTag("hpsPFTauDiscriminationByDecayModeFinding"),
@@ -98,7 +98,7 @@ recoTaus = cms.EDFilter(
 
 recoObjects = cms.Sequence(
     recoElecs*
-    recoTauClassicHPSSequence *
+    PFTau *
     dmTaus *
     isoTaus*
     recoTaus

@@ -88,7 +88,7 @@ process.scalersRawToDigi.scalersInputTag = 'rawDataCollector'
 # Tree producers
 if options.isPi0:
    process.tree = cms.EDAnalyzer(
-       "pionCalibImpl",
+       "pionCalibImplF",
        TPGSF1 = TPG_SF_1_veto,
        TPGSF2 = TPG_SF_v2_off,
        TPGSFp = TPG_SF_3_veto,
@@ -100,7 +100,7 @@ if options.isPi0:
    )
 else:
    process.tree = cms.EDAnalyzer(
-       "pionCalibImpl",
+       "pionCalibImplF",
        TPGSF1 = TPG_SF_1_veto,
        TPGSF2 = TPG_SF_v2_off,
        TPGSFp = TPG_SF_3_veto,

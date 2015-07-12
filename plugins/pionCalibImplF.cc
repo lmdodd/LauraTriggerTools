@@ -1,7 +1,7 @@
 /*
  * =====================================================================================
  *
- *       Filename:  pionCalibImpl.cc
+ *       Filename:  pionCalibImplF.cc
  *
  *    Description:  
  *
@@ -54,9 +54,9 @@ using namespace std;
 using namespace edm;
 
 
-class pionCalibImpl : public edm::EDAnalyzer {
+class pionCalibImplF : public edm::EDAnalyzer {
 	public:
-		explicit pionCalibImpl(const edm::ParameterSet& pset);
+		explicit pionCalibImplF(const edm::ParameterSet& pset);
 		static const unsigned int N_TOWER_PHI;
 		static const unsigned int N_TOWER_ETA;
 	private:
@@ -82,22 +82,22 @@ class pionCalibImpl : public edm::EDAnalyzer {
 		float maxEg2x1Pt_;
 
 		float instLumi_;
-		int TPGSum_;
+		float TPGSum_;
 		int TPGDiff_;
-		int TPGE_;
-		int cTPGE_;
-		int TPGH_;
-		int cTPGH_;
-		int TPGHtwr_;
-		int TPGEtwr_;
-		int TPG5x5_;
-		int cTPG5x5_;
+		float TPGE_;
+		float cTPGE_;
+		float TPGH_;
+		float cTPGH_;
+		float TPGHtwr_;
+		float TPGEtwr_;
+		float TPG5x5_;
+		float cTPG5x5_;
 		int TPG5x5_gcteta_;
 		int TPG5x5_tpgeta_;
-		int TPGh5x5_;
-		int TPGe5x5_;
-		int cTPGh5x5_;
-		int cTPGe5x5_;
+		float TPGh5x5_;
+		float TPGe5x5_;
+	        float cTPGh5x5_;
+		float cTPGe5x5_;
 		int ptbin_;
 		unsigned int npvs_;
 
@@ -124,10 +124,10 @@ class pionCalibImpl : public edm::EDAnalyzer {
 
 		double LSB = 0.5;
 
-		vector<vector<unsigned int>> eTowerETCode;
-		vector<vector<unsigned int>> eCorrTowerETCode;
-		vector<vector<unsigned int>> hTowerETCode;
-		vector<vector<unsigned int>> hCorrTowerETCode;
+		vector<vector<float>> eTowerETCode;
+		vector<vector<float>> eCorrTowerETCode;
+		vector<vector<float>> hTowerETCode;
+		vector<vector<float>> hCorrTowerETCode;
 };
 
 // THESE ARE IN HELPERS-- this is a reference
@@ -159,43 +159,32 @@ class pionCalibImpl : public edm::EDAnalyzer {
 //	return convertTPGEta(iEta);
 //}
 
-// integerize given an LSB and set maximum value of 2^precision-1
-unsigned long convertToInteger(float et, float lsb, int precision) {
-  unsigned long etBits = (unsigned long)(et/lsb);
-  unsigned long maxValue = (1 << precision) - 1;
-  if(etBits > maxValue)
-    return maxValue;
-  else
-    return etBits;
-}
+unsigned int const pionCalibImplF::N_TOWER_PHI = 72;
+unsigned int const pionCalibImplF::N_TOWER_ETA = 56;
 
-
-unsigned int const pionCalibImpl::N_TOWER_PHI = 72;
-unsigned int const pionCalibImpl::N_TOWER_ETA = 56;
-
-pionCalibImpl::pionCalibImpl(const edm::ParameterSet& pset):
-	eTowerETCode(N_TOWER_PHI, vector<unsigned int>(N_TOWER_ETA)),
-	eCorrTowerETCode(N_TOWER_PHI, vector<unsigned int>(N_TOWER_ETA)),
-	hTowerETCode(N_TOWER_PHI, vector<unsigned int>(N_TOWER_ETA)),
-	hCorrTowerETCode(N_TOWER_PHI, vector<unsigned int>(N_TOWER_ETA))
+pionCalibImplF::pionCalibImplF(const edm::ParameterSet& pset):
+	eTowerETCode(N_TOWER_PHI, vector<float>(N_TOWER_ETA)),
+	eCorrTowerETCode(N_TOWER_PHI, vector<float>(N_TOWER_ETA)),
+	hTowerETCode(N_TOWER_PHI, vector<float>(N_TOWER_ETA)),
+	hCorrTowerETCode(N_TOWER_PHI, vector<float>(N_TOWER_ETA))
 {
 	// Initialize the ntuple builder
 	edm::Service<TFileService> fs;
 	tree = fs->make<TTree>("Ntuple", "Ntuple");
-	tree->Branch("TPGSum", &TPGSum_, "TPGSum/i");
+	tree->Branch("TPGSum", &TPGSum_, "TPGSum/F");
 	tree->Branch("TPGDiff", &TPGDiff_, "TPGDiff/i");
-	tree->Branch("TPGH", &TPGH_, "TPGH_/i");
-	tree->Branch("cTPGH", &cTPGH_, "cTPGH_/i");
-	tree->Branch("TPGE", &TPGE_, "TPGE/i");
-	tree->Branch("cTPGE", &cTPGE_, "cTPGE/i");
-	tree->Branch("TPG5x5", &TPG5x5_, "TPG5x5_/i");
-	tree->Branch("cTPG5x5", &cTPG5x5_, "cTPG5x5_/i");
+	tree->Branch("TPGH", &TPGH_, "TPGH_/F");
+	tree->Branch("cTPGH", &cTPGH_, "cTPGH_/F");
+	tree->Branch("TPGE", &TPGE_, "TPGE/F");
+	tree->Branch("cTPGE", &cTPGE_, "cTPGE/F");
+	tree->Branch("TPG5x5", &TPG5x5_, "TPG5x5_/F");
+	tree->Branch("cTPG5x5", &cTPG5x5_, "cTPG5x5_/F");
 	tree->Branch("TPG5x5_gcteta", &TPG5x5_gcteta_, "TPG5x5_gcteta_/i");
 	tree->Branch("TPG5x5_tpgeta", &TPG5x5_tpgeta_, "TPG5x5_tpgeta_/i");
-	tree->Branch("TPGh5x5", &TPGh5x5_, "TPGh5x5_/i");
-	tree->Branch("cTPGh5x5", &cTPGh5x5_, "cTPGh5x5_/i");
-	tree->Branch("TPGe5x5", &TPGe5x5_, "TPGe5x5_/i");
-	tree->Branch("cTPGe5x5", &cTPGe5x5_, "cTPGe5x5_/i");
+	tree->Branch("TPGh5x5", &TPGh5x5_, "TPGh5x5_/F");
+	tree->Branch("cTPGh5x5", &cTPGh5x5_, "cTPGh5x5_/F");
+	tree->Branch("TPGe5x5", &TPGe5x5_, "TPGe5x5_/F");
+	tree->Branch("cTPGe5x5", &cTPGe5x5_, "cTPGe5x5_/F");
 	tree->Branch("ptbin", &ptbin_, "ptbin_/i");
 	tree->Branch("run", &run_, "run/i");
 	tree->Branch("lumi", &lumi_, "lumi/i");
@@ -218,7 +207,7 @@ pionCalibImpl::pionCalibImpl(const edm::ParameterSet& pset):
 }
 
 
-void pionCalibImpl::analyze(const edm::Event& evt, const edm::EventSetup& es) {
+void pionCalibImplF::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 
 	// Setup meta info
 	run_ = evt.id().run();
@@ -278,15 +267,15 @@ void pionCalibImpl::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 	TPGe5x5_=0;
 
 	// TPG TEST
-	int maxTPGPt = 0;
-	int maxTPGEPt = 0;
-	int maxTPGHPt = 0;
-	int maxTPGPt_phi = 999;
-	int maxTPGHPt_phi = 999;
-	int maxTPGEPt_phi = 999;
-	int maxTPGPt_eta = 999;
-	int maxTPGHPt_eta = 999;
-	int maxTPGEPt_eta = 999;
+	float maxTPGPt = 0;
+	float maxTPGEPt = 0;
+	float maxTPGHPt = 0;
+	float maxTPGPt_phi = 999;
+	float maxTPGHPt_phi = 999;
+	float maxTPGEPt_phi = 999;
+	float maxTPGPt_eta = 999;
+	float maxTPGHPt_eta = 999;
+	float maxTPGEPt_eta = 999;
 
 
 
@@ -298,8 +287,8 @@ void pionCalibImpl::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 		int ieta = TPGEtaRange(cal_ieta);
 		// TPG iPhi starts at 1 and goes to 72.  Let's index starting at zero.
 		// TPG ieta ideal goes from 0-55.
-		//cout<<"Before filling eTower"
-		//	<<"ieta:"<<ieta<<" cal_ieta:"<< cal_ieta<<" iphi:"<<iphi<<endl;
+		cout<<"Before filling eTower"
+			<<"ieta:"<<ieta<<" cal_ieta:"<< cal_ieta<<" iphi:"<<iphi<<endl;
 		double et= (*ecal)[i].compressedEt()*LSB;
 		TPGSum_ +=et;
 		TPGE_ +=et;
@@ -323,16 +312,15 @@ void pionCalibImpl::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 		double alpha = TPGSF1_[etbin*56+ieta]*TPGSF2_[ieta];
 
 
-		//eCorrTowerETCode[iphi][ieta] = alpha*et;
 		eCorrTowerETCode[iphi][ieta] = alpha*et;
 		cTPGE_ +=alpha*et;
-		//		if (et>0){cout<<"eTowerETCode: "<<eTowerETCode[iphi][ieta]<<endl;}
+				if (et>0){cout<<"eTowerETCode: "<<eTowerETCode[iphi][ieta]<<endl;}
 		if ((*ecal)[i].compressedEt() > 0) {
-			//			std::cout << "ecal eta/phi=" << ieta << "/" << iphi
-			//				<< " = (" << getEtaTPG(cal_ieta) << "/" << getPhiTPG(cal_iphi) << ") "
-			//				<< " et="<< (*ecal)[i].compressedEt()*egLSB_ << " fg=" << (*ecal)[i].fineGrain()
-			//				<< " rctEta="<< twrEta2RegionEta(ieta) << " rctPhi=" << twrPhi2RegionPhi(cal_iphi)
-			//				<< std::endl;
+						std::cout << "ecal eta/phi=" << ieta << "/" << iphi
+							<< " = (" << getEtaTPG(cal_ieta) << "/" << getPhiTPG(cal_iphi) << ") "
+							<< " et="<< (*ecal)[i].compressedEt()*egLSB_ << " fg=" << (*ecal)[i].fineGrain()
+							<< " rctEta="<< twrEta2RegionEta(ieta) << " rctPhi=" << twrPhi2RegionPhi(cal_iphi)
+							<< std::endl;
 		}
 		if (et>maxTPGEPt){
 			maxTPGEPt=et;
@@ -353,16 +341,10 @@ void pionCalibImpl::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 
 		if (ieta >= -1000 && ieta <= 1000 &&
 				iphi >= -1000 && ieta <= 1000) {
-			double energy_double = hcalScale->et(
+			double energy = hcalScale->et(
 					(*hcal)[i].SOI_compressedEt(), absieta, zside); 
-                        //cout<<"energy_double: "<<energy_double<<endl;
-                        //double energy_halfint = round(energy_double*2.0)/2.0;
-                        double energy_halfint = round(energy_double);
-                        //cout<<"energy_halfint: "<<energy_halfint<<endl;
-                        
-                        int energy = convertToInteger(energy_halfint,1.0,9);
-			//hTowerETCode[hniphi][hnieta] = energy;
-			hTowerETCode[hniphi][hnieta] = energy; 
+
+			hTowerETCode[hniphi][hnieta] = energy;
 			TPGSum_ +=energy;
 			TPGH_ += energy;
 			/*
@@ -379,17 +361,16 @@ void pionCalibImpl::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 			//	double alpha_h = 1; //v1 v2
 			double alpha_h = TPGSFp_[hnieta]; //v3
 			//	double alpha_h2 = TPGSFp1_[hnieta]; //v4
-			//hCorrTowerETCode[hniphi][hnieta] = alpha_h*energy;
-			hCorrTowerETCode[hniphi][hnieta] = convertToInteger(alpha_h*energy,1.0,9);
+			hCorrTowerETCode[hniphi][hnieta] = alpha_h*energy;
 			cTPGH_ += alpha_h*energy;
 
 			if (energy > 0) {
-				//				std::cout << "hcal eta/phi=" << ieta << "/" << iphi
-				//					<< " = (" << getEtaTPG(ieta) << "/" << getPhiTPG(iphi) << ") "
-				//					<< " et=" << (*hcal)[i].SOI_compressedEt()
-				//					<< " energy=" << energy
-				//					<< " rctEta="<< twrEta2RegionEta(hnieta) << " rctPhi=" << twrPhi2RegionPhi(hniphi)
-				//					<< " fg=" << (*hcal)[i].SOI_fineGrain() << std::endl;
+								std::cout << "hcal eta/phi=" << ieta << "/" << iphi
+									<< " = (" << getEtaTPG(ieta) << "/" << getPhiTPG(iphi) << ") "
+									<< " et=" << (*hcal)[i].SOI_compressedEt()
+									<< " energy=" << energy
+									<< " rctEta="<< twrEta2RegionEta(hnieta) << " rctPhi=" << twrPhi2RegionPhi(hniphi)
+									<< " fg=" << (*hcal)[i].SOI_fineGrain() << std::endl;
 			}
 			if (energy>maxTPGHPt){
 				maxTPGHPt=energy;
@@ -469,4 +450,4 @@ void pionCalibImpl::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 }
 
 #include "FWCore/Framework/interface/MakerMacros.h"
-DEFINE_FWK_MODULE(pionCalibImpl);
+DEFINE_FWK_MODULE(pionCalibImplF);

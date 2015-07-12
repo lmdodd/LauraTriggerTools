@@ -1,0 +1,9 @@
+/hdfs/store/user/laura/2015-03-30-V11-PiPlus_Pt10-makePionTree_cfg/makePionTree_cfg-24120E87-EEC8-E411-9766-0025905A606A.root
+/hdfs/store/user/laura/2015-03-30-V11-PiPlus_Pt15-makePionTree_cfg/makePionTree_cfg-4AF4A9F9-91C8-E411-84EB-0025905A60EE.root
+/hdfs/store/user/laura/2015-03-30-V11-PiPlus_Pt20-makePionTree_cfg/makePionTree_cfg-227451A8-98C8-E411-994A-0025905A48B2.root
+/hdfs/store/user/laura/2015-03-30-V11-PiPlus_Pt25-makePionTree_cfg/makePionTree_cfg-90A87F26-9AC8-E411-B44D-0025905A4964.root
+/hdfs/store/user/laura/2015-03-30-V11-PiPlus_Pt30-makePionTree_cfg/makePionTree_cfg-8A852FAB-98C8-E411-97C0-0025905A60F2.root
+/hdfs/store/user/laura/2015-03-30-V11-PiPlus_Pt35-makePionTree_cfg/makePionTree_cfg-3853F816-98C8-E411-BD0D-0025905A48D6.root
+/hdfs/store/user/laura/2015-03-30-V11-PiPlus_Pt40-makePionTree_cfg/makePionTree_cfg-164F2947-99C8-E411-9B1C-0025905A48EC.root
+/hdfs/store/user/laura/2015-03-30-V11-PiPlus_Pt45-makePionTree_cfg/makePionTree_cfg-0EC170C9-97C8-E411-9D41-002590596498.root
+/hdfs/store/user/laura/2015-03-30-V11-PiPlus_Pt55-makePionTree_cfg/makePionTree_cfg-10C104E0-9AC8-E411-BEF8-0025905A60F2.root

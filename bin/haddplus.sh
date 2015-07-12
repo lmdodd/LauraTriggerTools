@@ -1,0 +1,10 @@
+hadd /nfs_scratch/laura/piplus_pt10_73X.root /hdfs/store/user/laura/2015-03-26-ALLPIPLUS-73X-PiPlus_Pt10*/*root
+hadd /nfs_scratch/laura/piplus_pt15_73X.root /hdfs/store/user/laura/2015-03-26-ALLPIPLUS-73X-PiPlus_Pt15*/*root
+hadd /nfs_scratch/laura/piplus_pt20_73X.root /hdfs/store/user/laura/2015-03-26-ALLPIPLUS-73X-PiPlus_Pt20*/*root
+hadd /nfs_scratch/laura/piplus_pt25_73X.root /hdfs/store/user/laura/2015-03-26-ALLPIPLUS-73X-PiPlus_Pt25*/*root
+hadd /nfs_scratch/laura/piplus_pt30_73X.root /hdfs/store/user/laura/2015-03-26-ALLPIPLUS-73X-PiPlus_Pt30*/*root
+hadd /nfs_scratch/laura/piplus_pt35_73X.root /hdfs/store/user/laura/2015-03-26-ALLPIPLUS-73X-PiPlus_Pt35*/*root
+hadd /nfs_scratch/laura/piplus_pt40_73X.root /hdfs/store/user/laura/2015-03-26-ALLPIPLUS-73X-PiPlus_Pt40*/*root
+hadd /nfs_scratch/laura/piplus_pt45_73X.root /hdfs/store/user/laura/2015-03-26-ALLPIPLUS-73X-PiPlus_Pt45*/*root
+hadd /nfs_scratch/laura/piplus_pt50_73X.root /hdfs/store/user/laura/2015-03-26-ALLPIPLUS-73X-PiPlus_Pt50*/*root
+hadd /nfs_scratch/laura/piplus_pt55_73X.root /hdfs/store/user/laura/2015-03-26-ALLPIPLUS-73X-PiPlus_Pt55*/*root

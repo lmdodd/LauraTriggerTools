@@ -5,6 +5,8 @@ import sys
 import ROOT
 
 
+text_file = open("v1.txt","w")
+
 # So things don't look like crap.
 ROOT.gROOT.SetStyle("Plain")
 ROOT.gROOT.SetBatch(True)
@@ -65,6 +67,7 @@ for ptb in range(0,9):
     for eta in range(0,56):
         Mean =histos[ptb][eta].GetMean()
         print ("Ptb:%d eta:%d SF:%.2f" %(ptb,eta,Mean))
+        text_file.write("%f, " % Mean)
         MeanError =histos[ptb][eta].GetMeanError()
         bin=eta+1
         hist_ptb[ptb].SetBinContent(bin,Mean)

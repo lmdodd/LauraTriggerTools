@@ -21,7 +21,10 @@ cmsRun makeEGCalib.py #or submit via condor as in submitEG
 To make plots
 ```
 cd bin/ZEE
-python pythonTPG_step1.py /path/to/rootfile.root #produces outfile.root with historgrams
+python pythonTPG_step1.py /path/to/rootfile.root #python pythonTPG_step1.py ../../test/tpg_eg_verification.root 
+#Above produces outfile.root with histograms and a text file output v1.txt with the ECAL ScaleFactors
+python plotECAL.py outfile.root #produces plot from above
+#check saveWhere label in the above programs to where you want them to be saved.
 ```
 
 To check applied scale factors run 
@@ -30,3 +33,5 @@ To check applied scale factors run
 cd bin/ZEE
 python pythonTPG_step2.py /path/to/rootfile.root #produces plots that ought to be close to 1
 ```
+
+Similar method for Taus

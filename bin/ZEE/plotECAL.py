@@ -30,9 +30,9 @@ ntuple_file = ROOT.TFile(infile)
 ######## LABEL & SAVE WHERE #########
 
 if len(argv)>2:
-   saveWhere='~/www/Research/'+argv[2]+'_'
+   saveWhere='~/www/'+argv[2]+'_'
 else:
-   saveWhere='~/www/Research/'
+   saveWhere='~/www/'
 
 #####################################
 #Get NTUPLE                 #

@@ -21,5 +21,12 @@ cmsRun makeEGCalib.py #or submit via condor as in submitEG
 To make plots
 ```
 cd bin/ZEE
-python pythonTPG_step1.py /path/to/rootfile.root
+python pythonTPG_step1.py /path/to/rootfile.root #produces outfile.root with historgrams
+```
+
+To check applied scale factors run 
+
+```
+cd bin/ZEE
+python pythonTPG_step2.py /path/to/rootfile.root #produces plots that ought to be close to 1
 ```

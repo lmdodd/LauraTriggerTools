@@ -71,6 +71,11 @@ class EGRecoCalib : public edm::EDAnalyzer {
 
 		VInputTag recoSrc_;
 
+                // ID decisions objects
+                edm::EDGetTokenT<edm::ValueMap<bool> > eleLooseIdMapToken_;
+                edm::EDGetTokenT<edm::ValueMap<bool> > eleMediumIdMapToken_;
+                edm::EDGetTokenT<edm::ValueMap<bool> > eleTightIdMapToken_;
+
 		//initialize run info
 		unsigned int run_;
 		unsigned int lumi_;
@@ -213,6 +218,9 @@ namespace {
 
 
 EGRecoCalib::EGRecoCalib(const edm::ParameterSet& pset):
+        eleLooseIdMapToken_(consumes<edm::ValueMap<bool> >(pset.getParameter<edm::InputTag>("eleLooseIdMap"))),
+        eleMediumIdMapToken_(consumes<edm::ValueMap<bool> >(pset.getParameter<edm::InputTag>("eleMediumIdMap"))),
+        eleTightIdMapToken_(consumes<edm::ValueMap<bool> >(pset.getParameter<edm::InputTag>("eleTightIdMap"))),
 	eTowerETCode(N_TOWER_PHI, vector<unsigned int>(N_TOWER_ETA)),
 	eCorrTowerETCode(N_TOWER_PHI, vector<unsigned int>(N_TOWER_ETA)),
 	hTowerETCode(N_TOWER_PHI, vector<unsigned int>(N_TOWER_ETA)),
@@ -264,7 +272,7 @@ EGRecoCalib::EGRecoCalib(const edm::ParameterSet& pset):
 	hcalSrc_ = pset.exists("hcalSrc") ? pset.getParameter<InputTag>("hcalSrc"): InputTag("valHcalTriggerPrimitiveDigis");
 
 	// Input variables
-	recoSrc_ = pset.getParameter<VInputTag>("recoSrc");
+	recoSrc_ = pset.getParameter<InputTag>("recoSrc");
 
 	TPGSF1_= pset.getParameter<vector<double> >("TPGSF1");//calibration tables
 	TPGSF2_= pset.getParameter<vector<double> >("TPGSF2");//calibration tables
@@ -313,6 +321,13 @@ void EGRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 			evt, recoSrc_);
 
 	sort(objects.begin(), objects.end(), CandPtSorter());
+
+        edm::Handle<edm::ValueMap<bool> > loose_id_decisions;
+        edm::Handle<edm::ValueMap<bool> > medium_id_decisions;
+        edm::Handle<edm::ValueMap<bool> > tight_id_decisions;
+        evt.getByToken(eleLooseIdMapToken_ ,loose_id_decisions);
+        evt.getByToken(eleMediumIdMapToken_,medium_id_decisions);
+        evt.getByToken(eleTightIdMapToken_,tight_id_decisions);
 
 
 	//Reset important things
@@ -369,9 +384,13 @@ void EGRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 	//std::cout<<"Reco Objects!"<<std::endl;
 	for (size_t i = 0; i < objects.size(); ++i) {
 		//  std::cout<<objects[i]->pt()<<"   "<<objects[i]->eta()<<"   "<<objects[i]->phi()<<std::endl;
-		pts_->push_back(objects[i]->pt());
-		etas_->push_back(objects[i]->eta());
-		phis_->push_back(objects[i]->phi());
+		//const auto el = *objects->ptrAt(i);
+
+		if( (*medium_id_decisions)[el]){
+			pts_->push_back(objects[i]->pt());
+			etas_->push_back(objects[i]->eta());
+			phis_->push_back(objects[i]->phi());
+		}
 	}
 
 	//EG cand vector filling
@@ -518,7 +537,7 @@ void EGRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 						iphi >= -1000 && ieta <= 1000) {
 					double et = hcalScale->et(
 							(*hcal)[j].SOI_compressedEt(), absieta, zside)*LSB; 
-							//(*hcal)[j].SOI_compressedEt(), absieta, zside); 
+					//(*hcal)[j].SOI_compressedEt(), absieta, zside); 
 
 					double deltaEta=(etas_->at(i) - eta);
 					double deltaPhi=reco::deltaPhi(phis_->at(i),phi);
@@ -573,78 +592,78 @@ void EGRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 			int cTPGe5x5=0;
 			int cTPG5x5=0;
 			for (int j = -2; j < 3; ++j) {//}//phi
-			//for (int j = -5; j < 6; ++j) {//}//phi
+				//for (int j = -5; j < 6; ++j) {//}//phi
 				for (int k = -2; k < 3; ++k) {//} //eta
-				//for (int k = -5; k < 6; ++k) { //}//eta
+					//for (int k = -5; k < 6; ++k) { //}//eta
 					//std::cout<<"Inside j k for "<<std::endl;
 					int tpgsquarephi= TPG5x5_tpgphi_.at(i)+j;
-					//std::cout<<"tpgsquarephi "<<tpgsquarephi<< std::endl;
-					int tpgsquareeta= TPG5x5_tpgeta_.at(i)+k;
-					//std::cout<<"tpgsquareeta "<<tpgsquareeta<< std::endl;
-					if (tpgsquarephi==-1) {tpgsquarephi=71;}
-					if (tpgsquarephi==-2) {tpgsquarephi=70;}
-					if (tpgsquarephi==-3) {tpgsquarephi=69;}
-					if (tpgsquarephi==-4) {tpgsquarephi=68;}
-					if (tpgsquarephi==-5) {tpgsquarephi=67;}
-					if (tpgsquarephi==72) {tpgsquarephi=0;}
-					if (tpgsquarephi==73) {tpgsquarephi=1;}
-					if (tpgsquarephi==74) {tpgsquarephi=2;}
-					if (tpgsquarephi==75) {tpgsquarephi=3;}
-					if (tpgsquarephi==76) {tpgsquarephi=4;}
-					if (tpgsquareeta>55 || tpgsquareeta<0) {continue;}//No Eta values beyond
+			//std::cout<<"tpgsquarephi "<<tpgsquarephi<< std::endl;
+			int tpgsquareeta= TPG5x5_tpgeta_.at(i)+k;
+			//std::cout<<"tpgsquareeta "<<tpgsquareeta<< std::endl;
+			if (tpgsquarephi==-1) {tpgsquarephi=71;}
+			if (tpgsquarephi==-2) {tpgsquarephi=70;}
+			if (tpgsquarephi==-3) {tpgsquarephi=69;}
+			if (tpgsquarephi==-4) {tpgsquarephi=68;}
+			if (tpgsquarephi==-5) {tpgsquarephi=67;}
+			if (tpgsquarephi==72) {tpgsquarephi=0;}
+			if (tpgsquarephi==73) {tpgsquarephi=1;}
+			if (tpgsquarephi==74) {tpgsquarephi=2;}
+			if (tpgsquarephi==75) {tpgsquarephi=3;}
+			if (tpgsquarephi==76) {tpgsquarephi=4;}
+			if (tpgsquareeta>55 || tpgsquareeta<0) {continue;}//No Eta values beyond
 
-					TPGh5x5+=hTowerETCode[tpgsquarephi][tpgsquareeta];
-					TPGe5x5+=eTowerETCode[tpgsquarephi][tpgsquareeta];
-					TPG5x5+=hTowerETCode[tpgsquarephi][tpgsquareeta];
-					TPG5x5+=eTowerETCode[tpgsquarephi][tpgsquareeta];
-					cTPGh5x5+=hCorrTowerETCode[tpgsquarephi][tpgsquareeta];
-					cTPGe5x5+=eCorrTowerETCode[tpgsquarephi][tpgsquareeta];
-					cTPG5x5+=hCorrTowerETCode[tpgsquarephi][tpgsquareeta];
-					cTPG5x5+=eCorrTowerETCode[tpgsquarephi][tpgsquareeta];
-				}
-			}
-			TPGh5x5_.push_back(TPGh5x5);
-			TPGe5x5_.push_back(TPGe5x5);
-			TPG5x5_.push_back(TPG5x5);
-			cTPGh5x5_.push_back(cTPGh5x5);
-			cTPGe5x5_.push_back(cTPGe5x5);
-			cTPG5x5_.push_back(cTPG5x5);
-		}//end if max tpg
-		else { 
-			TPGh5x5_.push_back(0);
-			TPGe5x5_.push_back(0);
-			TPG5x5_.push_back(0);
-			cTPG5x5_.push_back(0);
-			cTPGe5x5_.push_back(0);
-			cTPGh5x5_.push_back(0);
-			TPG5x5_gcteta_.push_back(0);
-			TPG5x5_tpgeta_.push_back(0);
-			TPG5x5_tpgphi_.push_back(0);
-
+			TPGh5x5+=hTowerETCode[tpgsquarephi][tpgsquareeta];
+			TPGe5x5+=eTowerETCode[tpgsquarephi][tpgsquareeta];
+			TPG5x5+=hTowerETCode[tpgsquarephi][tpgsquareeta];
+			TPG5x5+=eTowerETCode[tpgsquarephi][tpgsquareeta];
+			cTPGh5x5+=hCorrTowerETCode[tpgsquarephi][tpgsquareeta];
+			cTPGe5x5+=eCorrTowerETCode[tpgsquarephi][tpgsquareeta];
+			cTPG5x5+=hCorrTowerETCode[tpgsquarephi][tpgsquareeta];
+			cTPG5x5+=eCorrTowerETCode[tpgsquarephi][tpgsquareeta];
 		}
-	}//end for
-
-
-	//Fill Pt bin
-	for(size_t i = 0; i < maxTPGPt_.size(); ++i){
-		if (maxTPGPt_.at(i)>0){
-		TPGVeto_.push_back(maxTPGPt_.at(i)/TPG5x5_.at(i));
-		}
-		else {TPGVeto_.push_back(-1);}
-		if(maxTPGPt_.at(i)<10){ptbin_.push_back(0);}
-		else if(maxTPGPt_.at(i)<15){ptbin_.push_back(1);}
-		else if(maxTPGPt_.at(i)<20){ptbin_.push_back(2);}
-		else if(maxTPGPt_.at(i)<25){ptbin_.push_back(3);}
-		else if(maxTPGPt_.at(i)<30){ptbin_.push_back(4);}
-		else if(maxTPGPt_.at(i)<35){ptbin_.push_back(5);}
-		else if(maxTPGPt_.at(i)<40){ptbin_.push_back(6);}
-		else if(maxTPGPt_.at(i)<45){ptbin_.push_back(7);}
-		else {ptbin_.push_back(8);}
 	}
+	TPGh5x5_.push_back(TPGh5x5);
+	TPGe5x5_.push_back(TPGe5x5);
+	TPG5x5_.push_back(TPG5x5);
+	cTPGh5x5_.push_back(cTPGh5x5);
+	cTPGe5x5_.push_back(cTPGe5x5);
+	cTPG5x5_.push_back(cTPG5x5);
+}//end if max tpg
+else { 
+	TPGh5x5_.push_back(0);
+	TPGe5x5_.push_back(0);
+	TPG5x5_.push_back(0);
+	cTPG5x5_.push_back(0);
+	cTPGe5x5_.push_back(0);
+	cTPGh5x5_.push_back(0);
+	TPG5x5_gcteta_.push_back(0);
+	TPG5x5_tpgeta_.push_back(0);
+	TPG5x5_tpgphi_.push_back(0);
 
-	//	std::cout<<"Fill Tree"<<std::endl;
+}
+}//end for
 
-	tree->Fill();
+
+//Fill Pt bin
+for(size_t i = 0; i < maxTPGPt_.size(); ++i){
+	if (maxTPGPt_.at(i)>0){
+		TPGVeto_.push_back(maxTPGPt_.at(i)/TPG5x5_.at(i));
+	}
+	else {TPGVeto_.push_back(-1);}
+	if(maxTPGPt_.at(i)<10){ptbin_.push_back(0);}
+	else if(maxTPGPt_.at(i)<15){ptbin_.push_back(1);}
+	else if(maxTPGPt_.at(i)<20){ptbin_.push_back(2);}
+	else if(maxTPGPt_.at(i)<25){ptbin_.push_back(3);}
+	else if(maxTPGPt_.at(i)<30){ptbin_.push_back(4);}
+	else if(maxTPGPt_.at(i)<35){ptbin_.push_back(5);}
+	else if(maxTPGPt_.at(i)<40){ptbin_.push_back(6);}
+	else if(maxTPGPt_.at(i)<45){ptbin_.push_back(7);}
+	else {ptbin_.push_back(8);}
+}
+
+//	std::cout<<"Fill Tree"<<std::endl;
+
+tree->Fill();
 }
 
 #include "FWCore/Framework/interface/MakerMacros.h"

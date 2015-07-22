@@ -6,12 +6,7 @@ from L1Trigger.LauraTriggerTools.TPG_cfi import *
 from FWCore.ParameterSet.VarParsing import VarParsing
 options = VarParsing ('analysis')
 # Set useful defaults
-#options.inputFiles = 'file:/nfs_scratch/laura/pion0test.root'
-#options.inputFiles = 'file:/hdfs/store/user/laura/SinglePi0Pt30/SinglePi0Pt30-0093.root'
-#options.inputFiles = '/store/user/laura/SinglePiPlusPt20/SinglePiPlusPt20-0093.root'
-options.inputFiles = 'file:/hdfs/store/user/laura/2012-08-01-CRAB_ZEESkim/skim_12_1_oNf.root'
-#soon to be data
-#options.inputFiles = '/store/user/laura/SinglePiPlusPt20/SinglePiPlusPt20-0093.root'
+options.inputFiles = 'file:/store/data/Run2015B/SingleElectron/MINIAOD/PromptReco-v1/000/251/162/00000/9CC606D8-4127-E511-8F35-02163E013830.root'
 
 options.outputFile = "tpg_eg_verification.root"
 #options.outputFile = "tpg_hcal_verification.root"
@@ -36,27 +31,17 @@ options.parseArguments()
 
 process = cms.Process("L1Digis")
 
-process.load('Configuration/StandardSequences/FrontierConditions_GlobalTag_cff')
-# Load the correct global tag, based on the release
-if 'CMSSW_6' in os.environ['CMSSW_VERSION']:
-    process.GlobalTag.globaltag = 'POSTLS162_V2::All'
-    print "Using global tag for upgrade MC: %s" % process.GlobalTag.globaltag
-    if not options.isMC:
-        raise ValueError("There is no data in CMSSW 6, you must mean isMC=1")
-else:
-    #raise ValueError("Why aren't you using CMSSW 6?")
-    if not options.isMC:
-        # CMSSW 5 data
-        process.GlobalTag.globaltag = 'GR_H_V28::All'
-    else:
-        # CMSSW 5 MC
-        process.GlobalTag.globaltag = 'START53_V7B::All'
-    process.GlobalTag.connect   = 'frontier://FrontierProd/CMS_COND_31X_GLOBALTAG'
-    process.GlobalTag.pfnPrefix = cms.untracked.string('frontier://FrontierProd/')
-    print "Using global tag for 52X data: %s" % process.GlobalTag.globaltag
+process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_condDBv2_cff')
+process.GlobalTag.globaltag = 'GR_P_V56'
 
+# Load the correct global tag, based on the release
 # UNCOMMENT THIS LINE TO RUN ON SETTINGS FROM THE DATABASE
 # process.es_prefer_GlobalTag = cms.ESPrefer('PoolDBESSource', 'GlobalTag')
+
+
+process.source.lumisToProcess = LumiList.LumiList(filename = '/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions15/13TeV/Cert_246908-251252_13TeV_PromptReco_Collisions15_JSON.txt').getVLuminosityBlockRange()
+
+
 
 process.maxEvents = cms.untracked.PSet(
     input = cms.untracked.int32(-1)
@@ -69,10 +54,36 @@ process.source = cms.Source(
     duplicateCheckMode = cms.untracked.string('noDuplicateCheck')
 )
 
+def dasQuery(queryString, entryTitle) :
+    import das_client
+    dasinfo = das_client.get_data('https://cmsweb.cern.ch', queryString, 0, 0, False)
+    if dasinfo['status'] != 'ok' :
+        raise Exception('DAS query failed.\nQuery: %s\nDAS Status returned: %s' % (queryString, dasinfo['status']))
+
+    for entry in dasinfo['data'] :
+        yield entry[entryTitle][0]
+
+def getSecondaryFiles(primaryFileList) :
+    secondaryFiles = []
+    for primaryFile in primaryFileList :
+        # TODO: Trim to LFN, e.g. /store/user/...
+        query = 'parent file=%s' % primaryFile
+        for entry in dasQuery(query, 'parent') :
+            secondaryFiles.append(entry['name'].encode('ascii','ignore'))
+    return secondaryFiles
+
+process.source.secondaryFileNames = cms.untracked.vstring(getSecondaryFiles(process.source.fileNames))
+ 
 process.TFileService = cms.Service(
     "TFileService",
     fileName = cms.string(options.outputFile)
 )
+
+import FWCore.PythonUtilities.LumiList as LumiList
+process.source.lumisToProcess = LumiList.LumiList(filename = '/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions15/13TeV/DCSOnly/json_DCSONLY_Run2015B.txt').getVLuminosityBlockRange()
+
+
+
 
 # Load emulation and RECO sequences
 if not options.isMC:
@@ -87,17 +98,10 @@ process.load("Configuration.Geometry.GeometryIdeal_cff")
 # Read inst. lumi. info from the scalers
 process.load("EventFilter.ScalersRawToDigi.ScalersRawToDigi_cfi")
 process.scalersRawToDigi.scalersInputTag = 'rawDataCollector'
-
-common_ntuple_branches = cms.PSet(
-#    index = cms.string("index"), # Index of reco object in the event
-#    nRecoObjects = cms.string("nTotalObjects"), # Number of reco objects in the event
-#    nPVs = cms.string("nPVs"), # number of reco'ed vertices in the event
-)
-
 # Tree producers
 process.tree = cms.EDAnalyzer(
     "EGRecoCalib",
-    recoSrc = cms.VInputTag("recoElecs"),
+    recoSrc = cms.InputTag("slimmedElectrons"),
     TPGSF1 = TPG_SF_1_227,
     #TPGSF1 = TPG_SF_v1_veto,
     TPGSF2 = TPG_SF_2_227,
@@ -115,7 +119,22 @@ process.tree = cms.EDAnalyzer(
     v4 = cms.bool(False)
 )
 
-reco_step=process.recoObjects
+
+from PhysicsTools.SelectorUtils.tools.vid_id_tools import *
+dataFormat = DataFormat.MiniAOD
+
+switchOnVIDElectronIdProducer(process, dataFormat)
+
+# define which IDs we want to produce
+my_id_modules = ['RecoEgamma.ElectronIdentification.Identification.cutBasedElectronID_PHYS14_PU20bx25_V2_cff']
+
+#add them to the VID producer
+for idmod in my_id_modules:
+    setupAllVIDIdsInModule(process,idmod,setupVIDElectronSelection)
+
+
+
+
 
 process.p1 = cms.Path(
     process.emulationSequence *

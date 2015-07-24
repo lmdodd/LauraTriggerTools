@@ -27,6 +27,7 @@
 #include "DataFormats/VertexReco/interface/VertexFwd.h"
 #include "DataFormats/Candidate/interface/Candidate.h"
 #include "DataFormats/Math/interface/deltaPhi.h"
+#include "DataFormats/EgammaCandidates/interface/GsfElectron.h"
 #include "DataFormats/HepMCCandidate/interface/GenParticle.h"
 #include "DataFormats/Common/interface/DetSet.h"
 #include "DataFormats/L1CaloTrigger/interface/L1CaloCollections.h"
@@ -69,7 +70,7 @@ class EGRecoCalib : public edm::EDAnalyzer {
 		InputTag ecalSrc_;
 		InputTag hcalSrc_;
 
-		VInputTag recoSrc_;
+		edm::EDGetToken recoSrc_;
 
                 // ID decisions objects
                 edm::EDGetTokenT<edm::ValueMap<bool> > eleLooseIdMapToken_;
@@ -196,22 +197,22 @@ namespace {
 	};
 
 	// Turn a set of VInputTags into a colleciton of candidate pointers.
-	std::vector<const reco::Candidate*> getCollections(
-			const edm::Event& evt, const VInputTag& collections) {
-		std::vector<const reco::Candidate*> output;
-		// Loop over collections
-		for (size_t i = 0; i < collections.size(); ++i) {
-			edm::Handle<edm::View<reco::Candidate> > handle;
-			evt.getByLabel(collections[i], handle);
-			// Loop over objects in current collection
-			for (size_t j = 0; j < handle->size(); ++j) {
-				const reco::Candidate& object = handle->at(j);
-				output.push_back(&object);
-			}
-		}
-		return output;
-	}
-
+	//std::vector<const reco::Candidate*> getCollections(
+	//		const edm::Event& evt, const VInputTag& collections) {
+//		std::vector<const reco::Candidate*> output;
+//		// Loop over collections
+//		for (size_t i = 0; i < collections.size(); ++i) {
+//			edm::Handle<edm::View<reco::Candidate> > handle;
+//			evt.getByLabel(collections[i], handle);
+//			// Loop over objects in current collection
+//			for (size_t j = 0; j < handle->size(); ++j) {
+//				const reco::Candidate& object = handle->at(j);
+//				output.push_back(&object);
+//			}
+//		}
+//		return output;
+//	}
+//
 }
 
 
@@ -267,12 +268,13 @@ EGRecoCalib::EGRecoCalib(const edm::ParameterSet& pset):
 
 
 	scalerSrc_ = pset.exists("scalerSrc") ? pset.getParameter<InputTag>("scalerSrc") : InputTag("scalersRawToDigi");
-	pvSrc_ = pset.exists("pvSrc") ? pset.getParameter<InputTag>("pvSrc") : InputTag("offlinePrimaryVertices");
+	pvSrc_ = pset.exists("pvSrc") ? pset.getParameter<InputTag>("pvSrc") : InputTag("offlineSlimmedPrimaryVertices");
 	ecalSrc_ = pset.exists("ecalSrc") ? pset.getParameter<InputTag>("ecalSrc"): InputTag("ecalDigis:EcalTriggerPrimitives");
-	hcalSrc_ = pset.exists("hcalSrc") ? pset.getParameter<InputTag>("hcalSrc"): InputTag("valHcalTriggerPrimitiveDigis");
+	hcalSrc_ = pset.exists("hcalSrc") ? pset.getParameter<InputTag>("hcalSrc"): InputTag("hcalDigis");
 
 	// Input variables
-	recoSrc_ = pset.getParameter<InputTag>("recoSrc");
+        recoSrc_    = mayConsume<edm::View<reco::GsfElectron> >(pset.getParameter<edm::InputTag>("recoSrc"));
+
 
 	TPGSF1_= pset.getParameter<vector<double> >("TPGSF1");//calibration tables
 	TPGSF2_= pset.getParameter<vector<double> >("TPGSF2");//calibration tables
@@ -317,10 +319,12 @@ void EGRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 
 
 	//get reco eg pt
-	vector<const reco::Candidate*> objects = getCollections(
-			evt, recoSrc_);
+	edm::Handle<edm::View<reco::GsfElectron> > objects;
+        evt.getByToken(recoSrc_,objects);
 
-	sort(objects.begin(), objects.end(), CandPtSorter());
+	//vector<const reco::Candidate*> objects = getCollections(
+	//		evt, recoSrc_);
+	//sort(objects.begin(), objects.end(), CandPtSorter());
 
         edm::Handle<edm::ValueMap<bool> > loose_id_decisions;
         edm::Handle<edm::ValueMap<bool> > medium_id_decisions;
@@ -382,14 +386,14 @@ void EGRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 
 	//std::cout<<"Done resetting important things"<<std::endl;
 	//std::cout<<"Reco Objects!"<<std::endl;
-	for (size_t i = 0; i < objects.size(); ++i) {
+	for (size_t i = 0; i < objects->size(); ++i) {
 		//  std::cout<<objects[i]->pt()<<"   "<<objects[i]->eta()<<"   "<<objects[i]->phi()<<std::endl;
-		//const auto el = *objects->ptrAt(i);
+		const auto el = objects->ptrAt(i);
 
 		if( (*medium_id_decisions)[el]){
-			pts_->push_back(objects[i]->pt());
-			etas_->push_back(objects[i]->eta());
-			phis_->push_back(objects[i]->phi());
+			pts_->push_back(el->pt());
+			etas_->push_back(el->eta());
+			phis_->push_back(el->phi());
 		}
 	}
 

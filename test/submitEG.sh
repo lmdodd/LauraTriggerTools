@@ -10,6 +10,8 @@ fi
 
 farmoutAnalysisJobs $1 \
   --infer-cmssw-path \
-  --input-file-list=ZEE.txt \
-  ./makeEGReco.py  \
+  --input-file-list=DoubleElectron.txt \
+  --input-dir=root://cmsxrootd.fnal.gov/ \
+  --assume-input-files-exist \
+  ./makeEGReco_data.py  \
   'inputFiles=$inputFileNames' 'outputFile=$outputFileName'

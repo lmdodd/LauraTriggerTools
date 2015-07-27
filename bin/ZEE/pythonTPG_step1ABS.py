@@ -69,7 +69,8 @@ for ptb in range(0,9):
         print ("Ptb:%d eta:%d SF:%.2f" %(ptb,eta,Mean))
         text_file.write("%f, " % Mean)
         MeanError =histos[ptb][eta].GetMeanError()
-        bin=eta+1
+        #bin=eta+1
+        bin=abs(eta-28)
         hist_ptb[ptb].SetBinContent(bin,Mean)
         hist_ptb[ptb].SetBinError(bin,MeanError)
     save = 'hist_ptb%d.png' % ptb 

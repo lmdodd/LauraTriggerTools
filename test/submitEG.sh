@@ -10,8 +10,9 @@ fi
 
 farmoutAnalysisJobs $1 \
   --infer-cmssw-path \
-  --input-file-list=DoubleElectron.txt \
+  --vsize-limit=8000 \
+  --input-file-list=DoubleEGPrompt.txt \
   --input-dir=root://cmsxrootd.fnal.gov/ \
   --assume-input-files-exist \
-  ./makeEGReco_data.py  \
+  ./makeEGReco_submit.py  \
   'inputFiles=$inputFileNames' 'outputFile=$outputFileName'

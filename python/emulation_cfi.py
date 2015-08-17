@@ -11,18 +11,14 @@ import FWCore.ParameterSet.Config as cms
 
 from L1Trigger.L1TCalorimeter.L1TRerunHCALTP_FromRaw_cff import *
 
-from Configuration.StandardSequences.RawToDigi_Data_cff import ecalDigis
+#from Configuration.StandardSequences.RawToDigi_Data_cff import ecalDigis
 
-
-
-HcalTPGCoderULUT.LUTGenerationMode = True
 
 # RCT
-# HCAL input would be from hcalDigis if hack not needed
 '''This remakes L1 regions'''
 l1Digis = cms.EDProducer(
     "L1RCTProducer",
-    hcalDigis = cms.VInputTag(cms.InputTag("simHcalTriggerPrimitiveDigis")),
+    hcalDigis = cms.VInputTag(cms.InputTag("hcalDigis")),
     useEcal = cms.bool(True),
     useHcal = cms.bool(True),
     ecalDigis = cms.VInputTag(cms.InputTag("ecalDigis:EcalTriggerPrimitives")),
@@ -37,7 +33,7 @@ l1Digis = cms.EDProducer(
 
 L1TCaloStage1_PPFromRaw = cms.Sequence(
     L1TRerunHCALTP_FromRAW
-    +ecalDigis
+    #+ecalDigis
 )
 
 

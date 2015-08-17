@@ -50,7 +50,7 @@ for event in ntuple:
                  for eta in range(0,56):
                      SF=0.0
                      maxTpgPt = event.TPGVeto[i]*event.TPG5x5[i]
-                     if event.recoPt[i]>0 and event.TPGe5x5[i]>0 and event.TPG5x5_tpgeta_[i] == eta and event.TPGVeto[i]>.4:
+                     if event.recoPt[i]>0 and event.TPGe5x5[i]>0 and event.TPG5x5_tpgeta_[i] == eta and event.TPGVeto[i]>.25:
                         reco=event.recoPt[i]
                         tpg=event.TPGe5x5[i]
                         SF = reco/tpg

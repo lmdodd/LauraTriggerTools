@@ -10,6 +10,9 @@ fi
 
 farmoutAnalysisJobs $1 \
   --infer-cmssw-path \
-  --input-file-list=DY20_skim.txt \
-  ./makeTauReco.py  \
+  --vsize-limit=8000 \
+  --input-file-list=SingleMuon.txt \
+  --input-dir=root://cmsxrootd.fnal.gov/ \
+  --assume-input-files-exist \
+  ./makeTauReco_fullcalibsubmit.py  \
   'inputFiles=$inputFileNames' 'outputFile=$outputFileName'

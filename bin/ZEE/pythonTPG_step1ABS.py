@@ -38,7 +38,7 @@ for i in range(0,9):
     hname_ptb = "hist_ptb%d" %(i)
     hist_ptb.append(ROOT.TH1F(hname_ptb,"",56,0,56))
     histos.append([])
-    for j in range(0,56):
+    for j in range(0,28):
         hname = "histos%d_%d" % (i, j) # Each histogram must have a unique name
         histos[i].append( ROOT.TH1F(hname,"",100,0,5) )
 
@@ -47,10 +47,11 @@ for event in ntuple:
     for i in range(0,nentries):    
           for ptb in range(0,9):
               if event.ptbin[i]==ptb:
-                 for eta in range(0,56):
+                 for eta in range(0,28):
+                     #bin=abs(eta-28)
                      SF=0.0
                      maxTpgPt = event.TPGVeto[i]*event.TPG5x5[i]
-                     if event.recoPt[i]>0 and event.TPGe5x5[i]>0 and event.TPG5x5_tpgeta_[i] == eta and event.TPGVeto[i]>.4:
+                     if event.recoPt[i]>0 and event.TPGe5x5[i]>0 and abs(event.TPG5x5_tpgeta_[i]-28) == eta and event.TPGVeto[i]>.25:
                         reco=event.recoPt[i]
                         tpg=event.TPGe5x5[i]
                         SF = reco/tpg
@@ -60,23 +61,39 @@ for event in ntuple:
                         #print("tpg: %.2f" % tpg)
                         #print("SF: %.2f" % SF)
                         histos[ptb][eta].Fill(SF)
-    
 print 'mean'
 for ptb in range(0,9):
     print '\t'
-    for eta in range(0,56):
+    text_file.write("\n")
+    for eta in range(0,28):
         Mean =histos[ptb][eta].GetMean()
-        print ("Ptb:%d eta:%d SF:%.2f" %(ptb,eta,Mean))
+        print ("Ptb:%d eta:%d SF:%.2fi \n" %(ptb,eta,Mean))
         text_file.write("%f, " % Mean)
         MeanError =histos[ptb][eta].GetMeanError()
-        #bin=eta+1
-        bin=abs(eta-28)
+        bin=eta+1
         hist_ptb[ptb].SetBinContent(bin,Mean)
         hist_ptb[ptb].SetBinError(bin,MeanError)
     save = 'hist_ptb%d.png' % ptb 
     hist_ptb[ptb].Draw("pE1")
     canvas.SaveAs(saveWhere+save) 
 
+#
+#print 'mean'
+#for ptb in range(0,9):
+#    print '\t'
+#    for eta in range(0,28):
+#        #bin=abs(eta-28)
+#        bin=eta+1
+#        Mean =histos[ptb][eta].GetMean()
+#        print ("Ptb:%d eta:%d SF:%.2f" %(ptb,eta,Mean))
+#        text_file.write("%f, " % Mean)
+#        MeanError =histos[ptb][eta].GetMeanError()
+#        hist_ptb[ptb].SetBinContent(bin,Mean)
+#        hist_ptb[ptb].SetBinError(bin,MeanError)
+#    save = 'hist_ptb%d.png' % ptb 
+#    hist_ptb[ptb].Draw("pE1")
+#    canvas.SaveAs(saveWhere+save) 
+#
 
 #
 file=ROOT.TFile("outfile.root","RECREATE")
@@ -85,7 +102,7 @@ file.cd()
 
 for ptb in range(0,9):
   hist_ptb[ptb].Write()
-  for eta in range(0,56):
+  for eta in range(0,28):
       histos[ptb][eta].Write()                 
 
 

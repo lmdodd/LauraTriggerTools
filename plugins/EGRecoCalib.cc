@@ -269,7 +269,8 @@ EGRecoCalib::EGRecoCalib(const edm::ParameterSet& pset):
 
 	scalerSrc_ = pset.exists("scalerSrc") ? pset.getParameter<InputTag>("scalerSrc") : InputTag("scalersRawToDigi");
 	pvSrc_ = pset.exists("pvSrc") ? pset.getParameter<InputTag>("pvSrc") : InputTag("offlineSlimmedPrimaryVertices");
-	ecalSrc_ = pset.exists("ecalSrc") ? pset.getParameter<InputTag>("ecalSrc"): InputTag("ecalDigis:EcalTriggerPrimitives");
+	//ecalSrc_ = pset.exists("ecalSrc") ? pset.getParameter<InputTag>("ecalSrc"): InputTag("ecalDigis:EcalTriggerPrimitives");
+	ecalSrc_ = pset.exists("ecalSrc") ? pset.getParameter<InputTag>("ecalSrc"): InputTag("ecalTriggerPrimitiveDigis");
 	hcalSrc_ = pset.exists("hcalSrc") ? pset.getParameter<InputTag>("hcalSrc"): InputTag("hcalDigis");
 
 	// Input variables
@@ -459,8 +460,7 @@ void EGRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 		if (ieta >= -1000 && ieta <= 1000 &&
 				iphi >= -1000 && ieta <= 1000) {
 			double energy = hcalScale->et(
-					(*hcal)[i].SOI_compressedEt(), absieta, zside); //USE LSB ??
-			//(*hcal)[i].SOI_compressedEt(), absieta, zside)*LSB; //*LSB
+					(*hcal)[i].SOI_compressedEt(), absieta, zside);
 
 			hTowerETCode[hniphi][hnieta] = energy;
 			//fill corrected tpgs here
@@ -540,8 +540,7 @@ void EGRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 				if (ieta >= -1000 && ieta <= 1000 &&
 						iphi >= -1000 && ieta <= 1000) {
 					double et = hcalScale->et(
-							(*hcal)[j].SOI_compressedEt(), absieta, zside)*LSB; 
-					//(*hcal)[j].SOI_compressedEt(), absieta, zside); 
+							(*hcal)[j].SOI_compressedEt(), absieta, zside); 
 
 					double deltaEta=(etas_->at(i) - eta);
 					double deltaPhi=reco::deltaPhi(phis_->at(i),phi);

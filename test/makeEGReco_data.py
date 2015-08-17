@@ -1,6 +1,6 @@
 import FWCore.ParameterSet.Config as cms
 import os
-from L1Trigger.LauraTriggerTools.Lut import *
+#from L1Trigger.LauraTriggerTools.Lut import *
 from L1Trigger.LauraTriggerTools.TPG_cfi import *
 # Get command line options
 from FWCore.ParameterSet.VarParsing import VarParsing
@@ -8,7 +8,7 @@ options = VarParsing ('analysis')
 # Set useful defaults
 options.inputFiles = '/store/data/Run2015B/SingleElectron/MINIAOD/PromptReco-v1/000/251/162/00000/9CC606D8-4127-E511-8F35-02163E013830.root'
 
-options.outputFile = "tpg_eg_verification.root"
+options.outputFile = "tpg_eg_verificationREEMU.root"
 #options.outputFile = "tpg_hcal_verification.root"
 
 
@@ -31,8 +31,17 @@ options.parseArguments()
 
 process = cms.Process("L1Digis")
 
+from L1Trigger.LauraTriggerTools.TPG_cfi import *
+
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_condDBv2_cff')
 process.GlobalTag.globaltag = 'GR_P_V56'
+process.load('Configuration.StandardSequences.RawToDigi_Data_cff')
+process.GlobalTag.toGet = cms.VPSet( 
+     cms.PSet(record = cms.string("EcalTPGLinearizationConstRcd"), 
+              tag = cms.string("EcalTPGLinearizationConst_weekly_test2_hlt"), 
+              connect =cms.untracked.string('frontier://FrontierPrep/CMS_CONDITIONS') 
+              ) 
+ )  
 
 # Load the correct global tag, based on the release
 # UNCOMMENT THIS LINE TO RUN ON SETTINGS FROM THE DATABASE
@@ -162,24 +171,48 @@ process.TFileService = cms.Service(
 )
 
 import FWCore.PythonUtilities.LumiList as LumiList
-#process.source.lumisToProcess = LumiList.LumiList(filename = '/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions15/13TeV/DCSOnly/json_DCSONLY_Run2015B.txt').getVLuminosityBlockRange()
-process.source.lumisToProcess = LumiList.LumiList(filename = '/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions15/13TeV/Cert_246908-251642_13TeV_PromptReco_Collisions15_JSON.txt').getVLuminosityBlockRange()
+process.source.lumisToProcess = LumiList.LumiList(filename = '/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions15/13TeV/Cert_246908-251883_13TeV_PromptReco_Collisions15_JSON_v2.txt').getVLuminosityBlockRange()
 
 
 
 
 # Load emulation and RECO sequences
-if not options.isMC:
-    process.load("L1Trigger.LauraTriggerTools.emulation_cfi")
-else:
-    process.load("L1Trigger.LauraTriggerTools.emulation_cfi")
-    #process.load("LauraTriggerTools.emulationMC_cfi")
+process.load("L1Trigger.LauraTriggerTools.emulation_cfi")
+#process.load("LauraTriggerTools.emulationMC_cfi")
 process.load("Configuration.Geometry.GeometryIdeal_cff")
 
 # Read inst. lumi. info from the scalers
 process.load("EventFilter.ScalersRawToDigi.ScalersRawToDigi_cfi")
 process.scalersRawToDigi.scalersInputTag = 'rawDataCollector'
 # Tree producers
+
+# ECAL TPG Producer
+process.load("Geometry.EcalMapping.EcalMapping_cfi")
+process.load("Geometry.EcalMapping.EcalMappingRecord_cfi")
+
+# ECAL TPG Analyzer
+process.load("Geometry.CaloEventSetup.CaloGeometry_cfi")
+process.load("Geometry.CaloEventSetup.EcalTrigTowerConstituents_cfi")
+process.load("Geometry.CMSCommonData.cmsIdealGeometryXML_cfi")
+
+process.ecalTriggerPrimitiveDigis = cms.EDProducer("EcalTrigPrimProducer",
+   InstanceEB = cms.string('ebDigis'),
+   InstanceEE = cms.string('eeDigis'),
+   Label = cms.string('ecalDigis'),
+
+   BarrelOnly = cms.bool(False),
+   Famos = cms.bool(False),
+   TcpOutput = cms.bool(False),
+
+   Debug = cms.bool(False),
+
+   binOfMaximum = cms.int32(6), ## optional from release 200 on, from 1-10
+
+)
+
+process.load("Geometry.CaloEventSetup.CaloTopology_cfi")
+
+
 process.tree = cms.EDAnalyzer(
     "EGRecoCalib",
     recoSrc = cms.InputTag("slimmedElectrons"),
@@ -216,10 +249,9 @@ my_id_modules = ['RecoEgamma.ElectronIdentification.Identification.cutBasedElect
 for idmod in my_id_modules:
     setupAllVIDIdsInModule(process,idmod,setupVIDElectronSelection)
 
-
-
-
 process.p1 = cms.Path(
+    process.ecalDigis*
+    process.ecalTriggerPrimitiveDigis*
     process.emulationSequence*
     process.scalersRawToDigi*
     process.egmGsfElectronIDSequence 
@@ -234,4 +266,9 @@ process.MessageLogger.cerr.FwkReport.reportEvery = 100
 
 # Spit out filter efficiency at the end.
 process.options = cms.untracked.PSet(wantSummary = cms.untracked.bool(True))
+
+#print out all processes used when running- useful check to see if module ran
+#UNCOMMENT BELOW
+dump_file = open('dump.py','w')
+dump_file.write(process.dumpPython())
 

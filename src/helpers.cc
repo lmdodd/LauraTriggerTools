@@ -175,6 +175,18 @@ int TPGEtaRange(int ieta){
 	return iEta;
 }
 
+int HCALTPGEtaRange(int ieta){
+	unsigned int iEta = 0;
+	// So here, -28 becomes 0.  -1 be comes 27.  +1 becomes 28. +28 becomes 55.
+	// And we have mapped [-28, -1], [1, 28] onto [0, 55]   
+	if(ieta < 0)
+		iEta = ieta + 28;
+	else if(ieta > 0)
+		iEta = ieta + 27;
+	return iEta;
+}
+
+
 double getEtaTPG(int ieta) {
 	unsigned int iEta = 0;
 	// So here, -28 becomes 0.  -1 be comes 27.  +1 becomes 28. +28 becomes 55.

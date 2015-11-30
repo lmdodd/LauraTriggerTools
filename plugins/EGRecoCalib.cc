@@ -96,6 +96,7 @@ class EGRecoCalib : public edm::EDAnalyzer {
 		vector<float>* phis_;
 
 		//TPG MAX information
+		vector<float> maxTPGdR_;
 		vector<float> maxTPGPt_;
 		vector<float> maxTPGPt_eta_;
 		vector<float> maxTPGPt_phi_;
@@ -111,6 +112,7 @@ class EGRecoCalib : public edm::EDAnalyzer {
 		float maxHTPGPt_phi;
 
 		//TPG information for matching
+		float maxTPGdR;
 		float maxTPGPt;
 		float maxTPGPt_eta;
 		float maxTPGPt_phi;
@@ -124,6 +126,7 @@ class EGRecoCalib : public edm::EDAnalyzer {
 		vector<int> TPG5x5_gcteta_;
 		vector<int> TPG5x5_tpgeta_;
 		vector<int> TPG5x5_tpgphi_;
+		vector<float> TPG5x5_dR_;
 		vector<int> TPGh5x5_;
 		vector<int> TPGe5x5_;
 
@@ -249,6 +252,7 @@ EGRecoCalib::EGRecoCalib(const edm::ParameterSet& pset):
 
 	//TPG5x5
 	tree->Branch("TPG5x5_tpgeta_", "std::vector<int>", &TPG5x5_tpgeta_);
+	tree->Branch("TPG5x5_dR_", "std::vector<float>", &TPG5x5_dR_);
 	tree->Branch("TPG5x5", "std::vector<int>", &TPG5x5_);
 	tree->Branch("TPGh5x5","std::vector<int>", &TPGh5x5_);
 	tree->Branch("TPGe5x5","std::vector<int>", &TPGe5x5_);
@@ -269,8 +273,7 @@ EGRecoCalib::EGRecoCalib(const edm::ParameterSet& pset):
 
 	scalerSrc_ = pset.exists("scalerSrc") ? pset.getParameter<InputTag>("scalerSrc") : InputTag("scalersRawToDigi");
 	pvSrc_ = pset.exists("pvSrc") ? pset.getParameter<InputTag>("pvSrc") : InputTag("offlineSlimmedPrimaryVertices");
-	//ecalSrc_ = pset.exists("ecalSrc") ? pset.getParameter<InputTag>("ecalSrc"): InputTag("ecalDigis:EcalTriggerPrimitives");
-	ecalSrc_ = pset.exists("ecalSrc") ? pset.getParameter<InputTag>("ecalSrc"): InputTag("ecalTriggerPrimitiveDigis");
+	ecalSrc_ = pset.exists("ecalSrc") ? pset.getParameter<InputTag>("ecalSrc"): InputTag("ecalDigis:EcalTriggerPrimitives");
 	hcalSrc_ = pset.exists("hcalSrc") ? pset.getParameter<InputTag>("hcalSrc"): InputTag("hcalDigis");
 
 	// Input variables
@@ -353,6 +356,7 @@ void EGRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 
 	//std::cout<<"Reset maxTPGS"<<std::endl;
 	// TPG TESTING
+	maxTPGdR_.clear();
 	maxTPGPt_.clear();
 	maxTPGPt_eta_.clear();
 	maxTPGPt_phi_.clear();
@@ -362,6 +366,7 @@ void EGRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 	TPG5x5_gcteta_.clear();
 	TPG5x5_tpgeta_.clear();
 	TPG5x5_tpgphi_.clear();
+	TPG5x5_dR_.clear();
 	TPGh5x5_.clear();
 	TPGe5x5_.clear();
 
@@ -379,6 +384,7 @@ void EGRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 	maxETPGPt=0;
 	maxETPGPt_eta=0;
 	maxETPGPt_phi=0;
+	maxTPGdR=0;
 	maxTPGPt=0;
 	maxTPGPt_eta=0;
 	maxTPGPt_phi=0;
@@ -388,10 +394,10 @@ void EGRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 	//std::cout<<"Done resetting important things"<<std::endl;
 	//std::cout<<"Reco Objects!"<<std::endl;
 	for (size_t i = 0; i < objects->size(); ++i) {
-		//  std::cout<<objects[i]->pt()<<"   "<<objects[i]->eta()<<"   "<<objects[i]->phi()<<std::endl;
+		//  std::cout<<objects->ptrAt(i)->pt()<<"   "<<objects->ptrAt(i)->eta()<<"   "<<objects->ptrAt(i)->phi()<<std::endl;
 		const auto el = objects->ptrAt(i);
 
-		if( (*medium_id_decisions)[el]){
+		if( (*loose_id_decisions)[el]){
 			pts_->push_back(el->pt());
 			etas_->push_back(el->eta());
 			phis_->push_back(el->phi());
@@ -512,13 +518,14 @@ void EGRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 				double deltaPhi=reco::deltaPhi(phis_->at(i),phi);
 				double dR=sqrt( deltaEta*deltaEta + deltaPhi*deltaPhi);
 
-				if (dR<.5 && dR<closestDR && pts_->at(i)<55 && fabs(pts_->at(i)-et) < closestDRET) { //require dR<.5, closestDr that
+				if (dR<.2 && dR<closestDR && pts_->at(i)<127 && fabs(pts_->at(i)-et) < closestDRET) { //require dR<.5, closestDr that
 					closestDRET=abs(pts_->at(i)-et);
 					closestDR= dR;
 					match=j;
 					//maxETPGPt = et;
 					//maxETPGPt_eta = ieta;
 					//maxETPGPt_phi = iphi;
+					maxTPGdR = closestDR;
 					maxTPGPt = et;
 					maxTPGPt_eta = ieta;
 					maxTPGPt_phi = iphi;
@@ -546,13 +553,14 @@ void EGRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 					double deltaPhi=reco::deltaPhi(phis_->at(i),phi);
 					double dR=sqrt( deltaEta*deltaEta + deltaPhi*deltaPhi);
 
-					if (dR<.5 && dR<closestDR && pts_->at(i)<55 && fabs(pts_->at(i)-et) < closestDRET) { //require dR<.5, closestDr that
+					if (dR<.2 && dR<closestDR && pts_->at(i)<127 && fabs(pts_->at(i)-et) < closestDRET) { //require dR<.5, closestDr that
 						closestDRET=abs(pts_->at(i)-et);
 						closestDR= dR;
 						match=j;
 						//maxHTPGPt = et;
 						//maxHTPGPt_phi = iphi;
 						//maxHTPGPt_eta = ieta;
+						maxTPGdR = closestDR;
 						maxTPGPt = et;
 						maxTPGPt_eta = ieta;
 						maxTPGPt_phi = iphi;
@@ -562,11 +570,13 @@ void EGRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 		} //end !ECALOn
 
 		if (match==-1){
+			maxTPGdR_.push_back(999);
 			maxTPGPt_.push_back(0);
 			maxTPGPt_eta_.push_back(999);
 			maxTPGPt_phi_.push_back(999);
 		}
 		else {
+			maxTPGdR_.push_back(maxTPGdR);
 			maxTPGPt_.push_back(maxTPGPt);
 			//cout<<"MaxEgTPG: "<<maxETPGPt<<endl;
 			maxTPGPt_eta_.push_back(maxTPGPt_eta);
@@ -588,16 +598,15 @@ void EGRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 			TPG5x5_gcteta_.push_back(twrEta2RegionEta(maxTPGPt_eta_.at(i)));
 			TPG5x5_tpgeta_.push_back(maxTPGPt_eta_.at(i));
 			TPG5x5_tpgphi_.push_back(maxTPGPt_phi_.at(i));
+			TPG5x5_dR_.push_back(maxTPGdR_.at(i));
 			int TPGh5x5=0;
 			int TPGe5x5=0;
 			int TPG5x5=0;
 			int cTPGh5x5=0;
 			int cTPGe5x5=0;
 			int cTPG5x5=0;
-			for (int j = -2; j < 3; ++j) {//}//phi
-				//for (int j = -5; j < 6; ++j) {//}//phi
-				for (int k = -2; k < 3; ++k) {//} //eta
-					//for (int k = -5; k < 6; ++k) { //}//eta
+			for (int j = -1; j < 2; ++j) {//}//phi
+				for (int k = -1; k < 2; ++k) {//} //eta
 					//std::cout<<"Inside j k for "<<std::endl;
 					int tpgsquarephi= TPG5x5_tpgphi_.at(i)+j;
 			//std::cout<<"tpgsquarephi "<<tpgsquarephi<< std::endl;

@@ -362,7 +362,7 @@ void TauRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 	evt.getByToken(tauToken_, taus);
 	for (const pat::Tau &tau : *taus) {
 		//if (tau.tauID("decayModeFinding")&&abs(tau.eta())<2.3&&tau.tauID("againstMuonTight3")>0.5&&tau.tauID("againstElectronLooseMVA5")>0.5&&(tau.decayMode()==0||tau.decayMode()==10)&&tau.tauID("byCombinedIsolationDeltaBetaCorrRaw3Hits")<2){
-		if (abs(tau.eta())<2.3&&tau.tauID("againstMuonTight3")>0.5&&tau.tauID("againstElectronLooseMVA5")>0.5&&(tau.decayMode()==0||tau.decayMode()==10)&&tau.tauID("byCombinedIsolationDeltaBetaCorrRaw3Hits")<2){
+		if (abs(tau.eta())<3&&tau.tauID("againstMuonTight3")>0.5&&tau.tauID("againstElectronTightMVA6")>0.5&&(tau.decayMode()==0||tau.decayMode()==10)&&tau.tauID("byCombinedIsolationDeltaBetaCorrRaw3Hits")<2){
 			pts_->push_back(tau.pt());
 			dms_->push_back(tau.decayMode());
 			etas_->push_back(tau.eta());

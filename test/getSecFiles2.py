@@ -28,7 +28,7 @@ with open(inputFile,'r') as f:
 		    das_output = das_output.replace("/store","'root://cmsxrootd.fnal.gov//store") #need xrootd info in secondary filename
                     das_output = das_output.replace("\n","") #don't want newline in string
                     #print das_output
-		    das_output_sum += das_output#remove last comma in list of secondary files
+		    das_output_sum += das_output#add all secondary RAW files found!
 		das_output_sum = das_output_sum[:-1]#remove last comma in list of secondary files
 		output = output+das_output_sum+'],'#end list of secondary files
 output=output[:-1]#remove last comma

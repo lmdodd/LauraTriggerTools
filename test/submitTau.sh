@@ -11,8 +11,9 @@ fi
 farmoutAnalysisJobs $1 \
   --infer-cmssw-path \
   --vsize-limit=8000 \
-  --input-file-list=SingleMuon.txt \
+  --job-count=10 \
+  --input-file-list=Tau-2015D.txt \
   --input-dir=root://cmsxrootd.fnal.gov/ \
   --assume-input-files-exist \
-  ./makeTauReco_fullcalibsubmit.py  \
+  ./makeTauReco_2015D.py  \
   'inputFiles=$inputFileNames' 'outputFile=$outputFileName'

@@ -6,7 +6,7 @@ from L1Trigger.LauraTriggerTools.TPG_cfi import *
 from FWCore.ParameterSet.VarParsing import VarParsing
 options = VarParsing ('analysis')
 # Set useful defaults
-options.inputFiles = '/store/data/Run2015D/DoubleEG/MINIAOD/PromptReco-v4/000/258/159/00000/34346FDB-306C-E511-9A4C-02163E013641.root'
+options.inputFiles = '/store/data/Run2015D/SingleElectron/MINIAOD/05Oct2015-v1/10000/00991D45-4E6F-E511-932C-0025905A48F2.root'
 
 options.outputFile = "tpg_eg_verification.root"
 #options.outputFile = "tpg_hcal_verification.root"
@@ -45,6 +45,7 @@ process.maxEvents = cms.untracked.PSet(
 
 #secondary files
 from L1Trigger.LauraTriggerTools.Sec_Oct05_cfi import secondaryMap
+
 
 process.source = cms.Source(
     "PoolSource",

@@ -48,6 +48,7 @@
 
 
 typedef std::vector<edm::InputTag> VInputTag;
+
 //typedef std::vector<unsigned int> PackedUIntCollection;
 using namespace std;
 using namespace edm;
@@ -65,11 +66,11 @@ class TauRecoCalib : public edm::EDAnalyzer {
 
 
 		TTree* tree;
-		InputTag scalerSrc_;
-		InputTag l1Digis_;
-		InputTag pvSrc_;
-		InputTag ecalSrc_;
-		InputTag hcalSrc_;
+		edm::EDGetTokenT<std::vector<LumiScalers>> scalerSrc_;
+		edm::EDGetTokenT<std::vector<L1CaloRegion>> l1Digis_;
+		edm::EDGetTokenT<std::vector<reco::Vertex>> pvSrc_;
+		edm::EDGetTokenT<edm::SortedCollection<EcalTriggerPrimitiveDigi,edm::StrictWeakOrdering<EcalTriggerPrimitiveDigi> >> ecalSrc_;
+		edm::EDGetTokenT<edm::SortedCollection<HcalTriggerPrimitiveDigi,edm::StrictWeakOrdering<HcalTriggerPrimitiveDigi> >> hcalSrc_;
 
                 edm::EDGetTokenT<pat::TauCollection> tauToken_;
 
@@ -137,8 +138,6 @@ class TauRecoCalib : public edm::EDAnalyzer {
 
 
 		//handles
-		Handle<L1CaloRegionCollection> newRegions;
-		Handle<L1CaloEmCollection> newEMCands;
 		Handle<LumiScalersCollection> lumiScalers;
 		Handle<reco::VertexCollection> vertices;
 		Handle<EcalTrigPrimDigiCollection> ecal;
@@ -262,11 +261,11 @@ TauRecoCalib::TauRecoCalib(const edm::ParameterSet& pset):
 	tree->Branch("cTPGe5x5","std::vector<int>", &cTPGe5x5_);
 
 
-	scalerSrc_ = pset.exists("scalerSrc") ? pset.getParameter<InputTag>("scalerSrc") : InputTag("scalersRawToDigi");
-	pvSrc_ = pset.exists("pvSrc") ? pset.getParameter<InputTag>("pvSrc") : InputTag("offlineSlimmedPrimaryVertices");
-	ecalSrc_ = pset.exists("ecalSrc") ? pset.getParameter<InputTag>("ecalSrc"): InputTag("ecalDigis:EcalTriggerPrimitives");
+	scalerSrc_ = consumes<std::vector<LumiScalers>>(InputTag("scalersRawToDigi"));
+	pvSrc_ = consumes<std::vector<reco::Vertex>>(InputTag("offlineSlimmedPrimaryVertices"));
+	ecalSrc_ = consumes<edm::SortedCollection<EcalTriggerPrimitiveDigi,edm::StrictWeakOrdering<EcalTriggerPrimitiveDigi> >>(InputTag("ecalDigis:EcalTriggerPrimitives"));
 	//ecalSrc_ = pset.exists("ecalSrc") ? pset.getParameter<InputTag>("ecalSrc"): InputTag("ecalTriggerPrimitiveDigis");
-	hcalSrc_ = pset.exists("hcalSrc") ? pset.getParameter<InputTag>("hcalSrc"): InputTag("hcalDigis");
+	hcalSrc_ = consumes<edm::SortedCollection<HcalTriggerPrimitiveDigi,edm::StrictWeakOrdering<HcalTriggerPrimitiveDigi> >>( InputTag("hcalDigis"));
 
 	TPGSF1_= pset.getParameter<vector<double> >("TPGSF1");//calibration tables
 	TPGSFp_= pset.getParameter<vector<double> >("TPGSFp");//calibration tables
@@ -289,12 +288,10 @@ void TauRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 	run_ = evt.id().run();
 	lumi_ = evt.id().luminosityBlock();
 	event_ = evt.id().event();
-	evt.getByLabel(scalerSrc_, lumiScalers);
-	evt.getByLabel("l1Digis", newRegions);
-	evt.getByLabel("l1Digis", newEMCands);
-	evt.getByLabel(pvSrc_, vertices);
-	evt.getByLabel(ecalSrc_, ecal);
-	evt.getByLabel(hcalSrc_, hcal);
+	evt.getByToken(scalerSrc_, lumiScalers);
+	evt.getByToken(pvSrc_, vertices);
+	evt.getByToken(ecalSrc_, ecal);
+	evt.getByToken(hcalSrc_, hcal);
 
 
 	// EVENT INFO
@@ -362,7 +359,7 @@ void TauRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 	evt.getByToken(tauToken_, taus);
 	for (const pat::Tau &tau : *taus) {
 		//if (tau.tauID("decayModeFinding")&&abs(tau.eta())<2.3&&tau.tauID("againstMuonTight3")>0.5&&tau.tauID("againstElectronLooseMVA5")>0.5&&(tau.decayMode()==0||tau.decayMode()==10)&&tau.tauID("byCombinedIsolationDeltaBetaCorrRaw3Hits")<2){
-		if (abs(tau.eta())<3&&tau.tauID("againstMuonTight3")>0.5&&tau.tauID("againstElectronTightMVA6")>0.5&&(tau.decayMode()==0||tau.decayMode()==10)&&tau.tauID("byCombinedIsolationDeltaBetaCorrRaw3Hits")<2){
+		if (abs(tau.eta())<3&&tau.tauID("againstMuonTight3")>0.5&&tau.tauID("againstElectronLooseMVA6")>0.5&&(tau.decayMode()!=1&&tau.decayMode()!=6)&&tau.tauID("byCombinedIsolationDeltaBetaCorrRaw3Hits")<2){
 			pts_->push_back(tau.pt());
 			dms_->push_back(tau.decayMode());
 			etas_->push_back(tau.eta());
@@ -372,14 +369,9 @@ void TauRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 
 	//EG cand vector filling
 	//std::cout<<"L1 EG Cands"<<std::endl;
-	for(L1CaloEmCollection::const_iterator egtCand =
-			newEMCands->begin();
-			egtCand != newEMCands->end(); egtCand++){
-		double eget = egPhysicalEt(*egtCand);
-		egCandPt_.push_back(eget);
-		egCandEta_.push_back(egtCand->regionId().ieta()); //should be gctEta?
-		egCandPhi_.push_back(egtCand->regionId().iphi()); //should be gctPhi?
-	}//end egtCAnd
+		egCandPt_.push_back(-999);
+		egCandEta_.push_back(-999); //should be gctEta?
+		egCandPhi_.push_back(-999); //should be gctPhi?
 
 
 	//std::cout << "TPGS" << std::endl;

@@ -12,7 +12,7 @@ farmoutAnalysisJobs $1 \
   --infer-cmssw-path \
   --vsize-limit=8000 \
   --job-count=10 \
-  --input-file-list=Tau-2015D.txt \
+  --input-file-list=2015D-SingleMu.txt \
   --input-dir=root://cmsxrootd.fnal.gov/ \
   --assume-input-files-exist \
   ./makeTauReco_2015D.py  \

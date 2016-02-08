@@ -6,7 +6,8 @@ from L1Trigger.LauraTriggerTools.TPG_cfi import *
 from FWCore.ParameterSet.VarParsing import VarParsing
 options = VarParsing ('analysis')
 # Set useful defaults
-options.inputFiles = 'root://cmsxrootd.fnal.gov//store/data/Run2015D/Tau/MINIAOD/16Dec2015-v1/00000/02C83C1F-8CB1-E511-A92D-002590AC4C3E.root'
+#options.inputFiles = 'root://cmsxrootd.fnal.gov//store/data/Run2015D/Tau/MINIAOD/16Dec2015-v1/00000/02C83C1F-8CB1-E511-A92D-002590AC4C3E.root'
+options.inputFiles = '/store/data/Run2015D/SingleMuon/MINIAOD/16Dec2015-v1/10000/0034202D-A3A8-E511-BA9C-00259073E3DA.root'
 
 options.outputFile = "tpg_hcal_verification.root"
 
@@ -42,7 +43,8 @@ process.maxEvents = cms.untracked.PSet(
 )
 
 #secondary files
-from L1Trigger.LauraTriggerTools.Sec_Tau_cfi import secondaryMap
+from L1Trigger.LauraTriggerTools.Sec_Mu2015D_cfi import secondaryMap
+#from L1Trigger.LauraTriggerTools.Sec_Tau_cfi import secondaryMap
 
 process.source = cms.Source(
     "PoolSource",

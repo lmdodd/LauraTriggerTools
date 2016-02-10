@@ -45,7 +45,6 @@
 #include "CondFormats/DataRecord/interface/L1CaloHcalScaleRcd.h"
 #include "FWCore/Framework/interface/ESHandle.h"
 
-
 typedef std::vector<edm::InputTag> VInputTag;
 //typedef std::vector<unsigned int> PackedUIntCollection;
 using namespace std;

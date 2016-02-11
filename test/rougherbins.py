@@ -38,13 +38,11 @@ for i in range(0,7):
         histos[i].append( ROOT.TH1F(hname,"",100,0,5) )
 
 for event in ntuple:
-    if (event.gen_pt-event.l1_summed33)/event.gen_pt < -0.5:
-       continue 
     if event.gen_ieta==-999:
        continue
-    if event.l1_summed22<2:
+    if (event.gen_pt-event.l1_summed33)/event.gen_pt < -0.5:
        continue
-    if (event.gen_pt-event.l1_summed33)/event.gen_pt<-0.5:
+    if event.l1_summed33<2:
        continue
     if event.gen_pt<5:
        continue
@@ -52,19 +50,13 @@ for event in ntuple:
        ptb=0
     elif event.gen_pt>30 and event.gen_pt<50:
        ptb=1
-    elif event.gen_pt>50 and event.gen_pt<80:
+    elif event.gen_pt>50:
        ptb=2
-    elif event.gen_pt>80 and event.gen_pt<100:
-       ptb=3
-    elif event.gen_pt>100 and event.gen_pt<200:
-       ptb=4
-    elif event.gen_pt>200:
-       ptb=5
     elif event.gen_pt>5 and event.gen_pt<20:
        ptb=6
     SF=0.0
     reco=event.gen_et
-    tpg=event.l1_summed22
+    tpg=event.l1_summed33
     SF = reco/tpg
     #print 'gen_ieta'
     #print event.gen_ieta

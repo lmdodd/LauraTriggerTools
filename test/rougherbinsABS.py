@@ -31,20 +31,18 @@ histos = []
 hist_ptb = []
 for i in range(0,7):
     hname_ptb = "hist_ptb%d" %(i)
-    hist_ptb.append(ROOT.TH1F(hname_ptb,"",82,0,82))
+    hist_ptb.append(ROOT.TH1F(hname_ptb,"",41,0,41))
     histos.append([])
-    for j in range(0,82):
+    for j in range(0,41):
         hname = "histos%d_%d" % (i, j) # Each histogram must have a unique name
         histos[i].append( ROOT.TH1F(hname,"",100,0,5) )
 
 for event in ntuple:
-    if (event.gen_pt-event.l1_summed33)/event.gen_pt < -0.5:
-       continue 
     if event.gen_ieta==-999:
        continue
-    if event.l1_summed22<2:
+    if (event.gen_pt-event.l1_summed33)/event.gen_pt < -0.5:
        continue
-    if (event.gen_pt-event.l1_summed33)/event.gen_pt<-0.5:
+    if event.l1_summed33<2:
        continue
     if event.gen_pt<5:
        continue
@@ -52,34 +50,24 @@ for event in ntuple:
        ptb=0
     elif event.gen_pt>30 and event.gen_pt<50:
        ptb=1
-    elif event.gen_pt>50 and event.gen_pt<80:
+    elif event.gen_pt>50:
        ptb=2
-    elif event.gen_pt>80 and event.gen_pt<100:
-       ptb=3
-    elif event.gen_pt>100 and event.gen_pt<200:
-       ptb=4
-    elif event.gen_pt>200:
-       ptb=5
     elif event.gen_pt>5 and event.gen_pt<20:
        ptb=6
     SF=0.0
     reco=event.gen_et
-    tpg=event.l1_summed22
+    tpg=event.l1_summed33
     SF = reco/tpg
-    #print 'gen_ieta'
-    #print event.gen_ieta
-    if event.gen_ieta>0:
-       eta= event.gen_ieta+40
-    if event.gen_ieta<0:
-       eta= event.gen_ieta+41
+    eta= abs(event.gen_ieta)-1
+    print eta
     histos[ptb][eta].Fill(SF)
     
 print 'mean'
 for ptb in range(0,7):
     print '\t'
-    for eta in range(0,82):
+    for eta in range(0,41):
         Mean =histos[ptb][eta].GetMean()
-        print ("Ptb:%d eta:%d SF:%.2f" %(ptb,eta,Mean))
+        print ("Ptb:%d eta:%d SF:%.2f" %(ptb,eta+1,Mean))
         text_file.write("%f, " % Mean)
         MeanError =histos[ptb][eta].GetMeanError()
         bin=eta+1
@@ -97,7 +85,7 @@ file.cd()
 
 for ptb in range(0,7):
   hist_ptb[ptb].Write()
-  for eta in range(0,82):
+  for eta in range(0,41):
       histos[ptb][eta].Write()                 
 
 

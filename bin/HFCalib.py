@@ -20,64 +20,49 @@ infile = argv[1]
 ntuple_file = ROOT.TFile(infile)
 
 
-ntuple = ntuple_file.Get("tree/matched")
+ntuple = ntuple_file.Get("tree/Matched")
 
 canvas = ROOT.TCanvas("asdf", "adsf", 800, 800)
 
 ######## LABEL & SAVE WHERE #########
 
+if len(argv)>2:
+   saveWhere='~/www/Research/'+argv[2]+'_'
+else:
+   saveWhere=''
+
 ########### MAke Hist arrays #########
 histos = []
 hist_ptb = []
-for i in range(0,7):
+for i in range(0,9):
     hname_ptb = "hist_ptb%d" %(i)
-    hist_ptb.append(ROOT.TH1F(hname_ptb,"",82,0,82))
+    hist_ptb.append(ROOT.TH1F(hname_ptb,"",56,0,56))
     histos.append([])
-    for j in range(0,82):
+    for j in range(0,56):
         hname = "histos%d_%d" % (i, j) # Each histogram must have a unique name
         histos[i].append( ROOT.TH1F(hname,"",100,0,5) )
 
 for event in ntuple:
-    if (event.gen_pt-event.l1_summed33)/event.gen_pt < -0.5:
-       continue 
-    if event.gen_ieta==-999:
-       continue
-    if event.l1_summed22<2:
-       continue
-    if (event.gen_pt-event.l1_summed33)/event.gen_pt<-0.5:
-       continue
-    if event.gen_pt<5:
-       continue
-    if event.gen_pt>20 and event.gen_pt<30:
-       ptb=0
-    elif event.gen_pt>30 and event.gen_pt<50:
-       ptb=1
-    elif event.gen_pt>50 and event.gen_pt<80:
-       ptb=2
-    elif event.gen_pt>80 and event.gen_pt<100:
-       ptb=3
-    elif event.gen_pt>100 and event.gen_pt<200:
-       ptb=4
-    elif event.gen_pt>200:
-       ptb=5
-    elif event.gen_pt>5 and event.gen_pt<20:
-       ptb=6
-    SF=0.0
-    reco=event.gen_et
-    tpg=event.l1_summed22
-    SF = reco/tpg
-    #print 'gen_ieta'
-    #print event.gen_ieta
-    if event.gen_ieta>0:
-       eta= event.gen_ieta+40
-    if event.gen_ieta<0:
-       eta= event.gen_ieta+41
-    histos[ptb][eta].Fill(SF)
+    nentries = len(event.ptbin)
+    for i in range(0,nentries):    
+          for ptb in range(0,9):
+              if event.jet[i]==ptb:
+                 for eta in range(0,72):
+                     SF=0.0
+                     reco=event.recoPt[i]
+                     tpg=event.TPGe5x5[i]
+                     SF = reco/tpg
+                     #print("recoPt: %.2f" % event.recoPt[i])
+                     #print("reco: %.2f" % reco)
+                     #print("tpg5x5Pt: %.2f" % event.TPG5x5[i])
+                     #print("tpg: %.2f" % tpg)
+                     #print("SF: %.2f" % SF)
+                     histos[ptb][eta].Fill(SF)
     
 print 'mean'
-for ptb in range(0,7):
+for ptb in range(0,9):
     print '\t'
-    for eta in range(0,82):
+    for eta in range(0,56):
         Mean =histos[ptb][eta].GetMean()
         print ("Ptb:%d eta:%d SF:%.2f" %(ptb,eta,Mean))
         text_file.write("%f, " % Mean)
@@ -87,7 +72,7 @@ for ptb in range(0,7):
         hist_ptb[ptb].SetBinError(bin,MeanError)
     save = 'hist_ptb%d.png' % ptb 
     hist_ptb[ptb].Draw("pE1")
-    canvas.SaveAs(save) 
+    canvas.SaveAs(saveWhere+save) 
 
 
 #
@@ -95,9 +80,9 @@ file=ROOT.TFile("outfile.root","RECREATE")
 file.cd()
 #
 
-for ptb in range(0,7):
+for ptb in range(0,9):
   hist_ptb[ptb].Write()
-  for eta in range(0,82):
+  for eta in range(0,56):
       histos[ptb][eta].Write()                 
 
 

@@ -52,11 +52,6 @@ for event in ntuple:
                         reco=event.recoPt[i]
                         tpg=event.cTPGe5x5[i]
                         SF = reco/tpg
-                        #print("recoPt: %.2f" % event.recoPt[i])
-                        #print("reco: %.2f" % reco)
-                        #print("tpg5x5Pt: %.2f" % event.TPG5x5[i])
-                        #print("tpg: %.2f" % tpg)
-                        #print("SF: %.2f" % SF)
                         histos[ptb][eta].Fill(SF)
     
 print 'mean'

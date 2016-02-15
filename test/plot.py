@@ -1,6 +1,6 @@
 '''
-Usage:python jetEfficiencyPlot.py RootFile.root label[optional]
-Script to make some quick efficiency plots to test ntuple generation.
+Usage:python PlotScript.py RootFile.root label[optional]
+Script to make some quick plots.
 Author: L. Dodd, UW Madison
 '''
 

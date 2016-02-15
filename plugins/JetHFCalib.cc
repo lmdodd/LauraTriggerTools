@@ -75,6 +75,7 @@ class JetHFCalib : public edm::EDAnalyzer {
 		edm::InputTag digis_;
 		bool detid_;
 		double threshold_;
+		bool doClosure_;
 
 		int event_;
 
@@ -94,9 +95,9 @@ class JetHFCalib : public edm::EDAnalyzer {
 		double gen_phi_;
 		int gen_ieta_;
 		int gen_iphi_;
-		double l1_summed22_;
 		double l1_summed33_;
 		double l1_summed44_;
+		double l1_summed55_;
 
 
 		TTree *tps_;
@@ -113,6 +114,11 @@ class JetHFCalib : public edm::EDAnalyzer {
 		TTree *ev_;
 		double ev_tp_v0_et_;
 		double ev_tp_v1_et_;
+
+		float bin0[12] = { 1.80,1.54,1.41,1.37,1.36,1.34,1.39,1.47,1.56,1.68,1.92,2.07}; 
+		float bin1[12] = { 2.23,1.78,1.58,1.51,1.45,1.48,1.51,1.60,1.73,1.87,2.46,2.59}; 
+		float bin2[12] = { 2.30,1.70,1.59,1.51,1.47,1.47,1.53,1.58,1.67,1.88,2.51,2.49}; 
+		float bin3[12] = { 2.19,1.59,1.56,1.49,1.44,1.47,1.51,1.56,1.66,1.83,2.39,2.43}; 
 };
 
 
@@ -123,7 +129,8 @@ JetHFCalib::JetHFCalib(const edm::ParameterSet& config) :
 	edm::EDAnalyzer(),
 	digis_(config.getParameter<edm::InputTag>("triggerPrimitives")),
 	detid_(config.getUntrackedParameter<bool>("useDetIdForUncompression", true)),
-	threshold_(config.getUntrackedParameter<double>("threshold", 0.))
+	threshold_(config.getUntrackedParameter<double>("threshold", 0.)),
+	doClosure_(config.getUntrackedParameter<bool>("doClosure", false))
 {
 	edm::Service<TFileService> fs;
 
@@ -164,9 +171,9 @@ JetHFCalib::JetHFCalib(const edm::ParameterSet& config) :
 	matched_->Branch("gen_phi" , &gen_phi_);
 	matched_->Branch("gen_ieta" , &gen_ieta_);
 	matched_->Branch("gen_iphi" , &gen_iphi_);
-	matched_->Branch("l1_summed22" , &l1_summed22_);
 	matched_->Branch("l1_summed33" , &l1_summed33_);
 	matched_->Branch("l1_summed44" , &l1_summed44_);
+	matched_->Branch("l1_summed55" , &l1_summed55_);
 
 }
 
@@ -218,13 +225,20 @@ JetHFCalib::analyze(const edm::Event& event, const edm::EventSetup& setup)
 		if (digi.id().version() == 1){ //1x1 upgrade
 			ttids[digi.id()] = digi;
 			HcalTrigTowerDetId id = digi.id();
-
 			if (detid_)
 				tp_et_ = decoder->hcaletValue(id, digi.t0());
 			else
 				tp_et_ = decoder->hcaletValue(tp_ieta_, tp_iphi_, tp_soi_);
 			if (tp_et_ < threshold_)
 				continue;
+			tp_ieta_ = id.ieta();
+			//int bin = 0;
+			//if (doClosure_){
+			//	if (tp_et<20)  tp_et_tmp = tp_et_ *bin0[absieta] ; 
+			//	else if (tp_et<30)  tp_et_tmp = tp_et_ *bin1[absieta] ; 
+			//	else if (tp_et<50)  tp_et_tmp = tp_et_ *bin2[absieta] ; 
+			//	else if  tp_et_tmp = tp_et_ *bin3[absieta] ; 
+			//}
 
 			tp_ieta_ = id.ieta();
 			tp_iphi_ = id.iphi();
@@ -234,7 +248,7 @@ JetHFCalib::analyze(const edm::Event& event, const edm::EventSetup& setup)
 			tp_version_ = id.version();
 			tp_soi_ = digi.SOI_compressedEt();
 
-		tps_->Fill();
+			tps_->Fill();
 		}//end 1x1 upgrade
 
 
@@ -242,10 +256,11 @@ JetHFCalib::analyze(const edm::Event& event, const edm::EventSetup& setup)
 
 
 	}//end for of digis
-	l1_summed22_=0;
-	l1_summed33_=0;
-	l1_summed44_=0;
 	for(const auto& jet: *objects){
+		l1_summed33_=0;
+		l1_summed44_=0;
+		l1_summed55_=0;
+
 		if (std::abs(jet.eta())<2.976) continue;
 		gen_pt_=jet.pt();
 		gen_et_=jet.et();
@@ -258,14 +273,24 @@ JetHFCalib::analyze(const edm::Event& event, const edm::EventSetup& setup)
 				HcalTrigTowerDetId id = digi.id();
 				if (detid_) tp_et_ = decoder->hcaletValue(id, digi.t0());
 				else tp_et_ = decoder->hcaletValue(tp_ieta_, tp_iphi_, tp_soi_);
+				int absieta = abs(tp_ieta_)-30;
+				if (doClosure_){
+					if (tp_et_<20)  tp_et_ = tp_et_*bin0[absieta] ; 
+					else if (tp_et_<30)  tp_et_ = tp_et_*bin1[absieta] ; 
+					else if (tp_et_<50)  tp_et_ = tp_et_*bin2[absieta] ; 
+					else  tp_et_ = tp_et_*bin3[absieta] ; 
+					tp_et_= (int (tp_et_*2))/2.0;
+				}
+
+
 				if (tp_et_ < threshold_) continue;
-				if (abs(gen_ieta_-id.ieta())<2&&abs(gen_iphi_-id.iphi())<2) l1_summed22_+=tp_et_;
-				if (abs(gen_ieta_-id.ieta())<3&&abs(gen_iphi_-id.iphi())<3) l1_summed33_+=tp_et_;
-				if (abs(gen_ieta_-id.ieta())<4&&abs(gen_iphi_-id.iphi())<4) l1_summed44_+=tp_et_;
+				if (abs(gen_ieta_-id.ieta())<2&&abs(gen_iphi_-id.iphi())<2) l1_summed33_+=tp_et_;
+				if (abs(gen_ieta_-id.ieta())<3&&abs(gen_iphi_-id.iphi())<3) l1_summed44_+=tp_et_;
+				if (abs(gen_ieta_-id.ieta())<4&&abs(gen_iphi_-id.iphi())<4) l1_summed55_+=tp_et_;
 			}//end 1x1 upgrade
 
 		}
-                matched_->Fill();
+		matched_->Fill();
 	}
 
 

@@ -155,7 +155,7 @@ process.TFileService = cms.Service("TFileService",
 process.tree = cms.EDAnalyzer("JetHFCalib",
         triggerPrimitives = cms.InputTag("simHcalTriggerPrimitiveDigis", "" , "HFCALIB"),
         genSrc = cms.InputTag("ak4GenJetsNoNu","","HLT"),
-        doClosure = cms.untracked.bool(True)
+        doClosure = cms.untracked.bool(False)
 )
 
 

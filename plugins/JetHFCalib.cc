@@ -242,11 +242,12 @@ JetHFCalib::analyze(const edm::Event& event, const edm::EventSetup& setup)
 
 
 	}//end for of digis
-	l1_summed22_=0;
-	l1_summed33_=0;
-	l1_summed44_=0;
+
 	for(const auto& jet: *objects){
 		if (std::abs(jet.eta())<2.976) continue;
+		l1_summed22_=0;
+		l1_summed33_=0;
+		l1_summed44_=0;
 		gen_pt_=jet.pt();
 		gen_et_=jet.et();
 		gen_eta_=jet.eta();

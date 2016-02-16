@@ -29,6 +29,8 @@
 #include "CondFormats/L1TObjects/interface/L1CaloHcalScale.h"
 #include "CondFormats/DataRecord/interface/L1CaloHcalScaleRcd.h"
 
+#include "DataFormats/EcalDigi/interface/EcalDigiCollections.h"
+
 #include "DataFormats/Common/interface/SortedCollection.h"
 #include "DataFormats/CaloTowers/interface/CaloTower.h"
 #include "DataFormats/HcalDigi/interface/HcalDigiCollections.h"
@@ -73,6 +75,7 @@ class JetHFCalib : public edm::EDAnalyzer {
 		// ----------member data ---------------------------
 		edm::EDGetTokenT<std::vector<reco::GenJet>> genSrc_;
 		edm::InputTag digis_;
+		edm::InputTag Edigis_;
 		bool detid_;
 		double threshold_;
 		bool doClosure_;
@@ -96,8 +99,8 @@ class JetHFCalib : public edm::EDAnalyzer {
 		int gen_ieta_;
 		int gen_iphi_;
 		double l1_summed33_;
-		double l1_summed44_;
 		double l1_summed55_;
+		double l1_summed77_;
 
 
 		TTree *tps_;
@@ -128,6 +131,7 @@ unsigned int const JetHFCalib::N_TOWER_ETA = 82;
 JetHFCalib::JetHFCalib(const edm::ParameterSet& config) :
 	edm::EDAnalyzer(),
 	digis_(config.getParameter<edm::InputTag>("triggerPrimitives")),
+	Edigis_(config.getParameter<edm::InputTag>("eTriggerPrimitives")),
 	detid_(config.getUntrackedParameter<bool>("useDetIdForUncompression", true)),
 	threshold_(config.getUntrackedParameter<double>("threshold", 0.)),
 	doClosure_(config.getUntrackedParameter<bool>("doClosure", false))
@@ -137,6 +141,7 @@ JetHFCalib::JetHFCalib(const edm::ParameterSet& config) :
 	genSrc_    = mayConsume<std::vector<reco::GenJet> >(config.getParameter<edm::InputTag>("genSrc"));
 
 	consumes<HcalTrigPrimDigiCollection>(digis_);
+	consumes<EcalTrigPrimDigiCollection>(Edigis_);
 
 	tps_ = fs->make<TTree>("tps", "Trigger primitives");
 	tps_->Branch("event", &event_);
@@ -172,8 +177,8 @@ JetHFCalib::JetHFCalib(const edm::ParameterSet& config) :
 	matched_->Branch("gen_ieta" , &gen_ieta_);
 	matched_->Branch("gen_iphi" , &gen_iphi_);
 	matched_->Branch("l1_summed33" , &l1_summed33_);
-	matched_->Branch("l1_summed44" , &l1_summed44_);
 	matched_->Branch("l1_summed55" , &l1_summed55_);
+	matched_->Branch("l1_summed77" , &l1_summed77_);
 
 }
 
@@ -191,6 +196,14 @@ JetHFCalib::analyze(const edm::Event& event, const edm::EventSetup& setup)
 		LogError("JetHFCalib") <<
 			"Can't find hcal trigger primitive digi collection with tag '" <<
 			digis_ << "'" << std::endl;
+		return;
+	}
+
+	Handle<EcalTrigPrimDigiCollection> Edigis;
+	if (!event.getByLabel(Edigis_, Edigis)) {
+		LogError("JetHFCalib") <<
+			"Can't find ecal trigger primitive digi collection with tag '" <<
+			Edigis_ << "'" << std::endl;
 		return;
 	}
 
@@ -258,8 +271,8 @@ JetHFCalib::analyze(const edm::Event& event, const edm::EventSetup& setup)
 	}//end for of digis
 	for(const auto& jet: *objects){
 		l1_summed33_=0;
-		l1_summed44_=0;
 		l1_summed55_=0;
+		l1_summed77_=0;
 
 		if (std::abs(jet.eta())<2.976) continue;
 		gen_pt_=jet.pt();
@@ -269,7 +282,7 @@ JetHFCalib::analyze(const edm::Event& event, const edm::EventSetup& setup)
 		gen_ieta_=convertHFGenEta(jet.eta());
 		gen_iphi_=convertGenPhi(jet.phi());
 		for (const auto& digi: *digis) {
-			if (digi.id().version() == 1){ //1x1 upgrade
+			if (digi.id().version() == 1||digi.id().ieta()<29){ //1x1 upgrade or ignore 29
 				HcalTrigTowerDetId id = digi.id();
 				if (detid_) tp_et_ = decoder->hcaletValue(id, digi.t0());
 				else tp_et_ = decoder->hcaletValue(tp_ieta_, tp_iphi_, tp_soi_);
@@ -284,9 +297,32 @@ JetHFCalib::analyze(const edm::Event& event, const edm::EventSetup& setup)
 
 
 				if (tp_et_ < threshold_) continue;
-				if (abs(gen_ieta_-id.ieta())<2&&abs(gen_iphi_-id.iphi())<2) l1_summed33_+=tp_et_;
-				if (abs(gen_ieta_-id.ieta())<3&&abs(gen_iphi_-id.iphi())<3) l1_summed44_+=tp_et_;
-				if (abs(gen_ieta_-id.ieta())<4&&abs(gen_iphi_-id.iphi())<4) l1_summed55_+=tp_et_;
+			  	double ecalet=0;	
+				if (id.ieta()==29)continue;
+
+				if (id.ieta()<29){
+					for (const auto& Edigi: *Edigis) {
+						if (Edigi.id().ieta()==id.ieta() && Edigi.id().iphi()==id.iphi()){ 
+							ecalet = Edigi.compressedEt()*0.5;
+							std::cout<<"ECalET set: "<< ecalet<<std::endl;
+							break;}
+					}
+				}
+				if (gen_ieta_==30&&abs(gen_iphi_-id.iphi())<2) {
+					if ((id.ieta()==28||abs(gen_ieta_-id.ieta())<2)) {l1_summed33_+=tp_et_;l1_summed33_+=ecalet;}
+					if ((id.ieta()==28||id.ieta()==27||abs(gen_ieta_-id.ieta())<2)) {l1_summed55_+=tp_et_;l1_summed55_+=ecalet;}
+					if ((id.ieta()==26||id.ieta()==28||id.ieta()==27||abs(gen_ieta_-id.ieta())<2)) {l1_summed77_+=tp_et_;l1_summed77_+=ecalet; }
+				} 
+				else if (gen_ieta_==31&&abs(gen_iphi_-id.iphi())<2) {
+					if ((abs(gen_ieta_-id.ieta())<2)) l1_summed33_+=tp_et_;
+					if ((id.ieta()==28||abs(gen_ieta_-id.ieta())<2)) {l1_summed55_+=tp_et_;l1_summed55_+=ecalet;}
+					if ((id.ieta()==28||id.ieta()==27||abs(gen_ieta_-id.ieta())<2)) {l1_summed77_+=tp_et_;l1_summed77_+=ecalet; }
+				} 
+				else{
+					if (abs(gen_ieta_-id.ieta())<2&&abs(gen_iphi_-id.iphi())<2) l1_summed33_+=tp_et_;
+					if (abs(gen_ieta_-id.ieta())<3&&abs(gen_iphi_-id.iphi())<3) l1_summed55_+=tp_et_;
+					if (abs(gen_ieta_-id.ieta())<4&&abs(gen_iphi_-id.iphi())<4) l1_summed77_+=tp_et_;
+				}
 			}//end 1x1 upgrade
 
 		}

@@ -12,6 +12,10 @@ process.GlobalTag.globaltag = '80X_mcRun2_asymptotic_v0'
 process.options   = cms.untracked.PSet( wantSummary = cms.untracked.bool(True) )
 process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
 
+process.load("CondCore.DBCommon.CondDBSetup_cfi")
+process.load("CondCore.DBCommon.CondDBCommon_cfi")
+
+
 process.source = cms.Source("PoolSource",
         fileNames = cms.untracked.vstring(
 '/store/mc/RunIIFall15DR76/VBF_HToInvisible_M125_13TeV_powheg_pythia8/GEN-SIM-RAW/25nsPUfixed30NzshcalRaw_76X_mcRun2_asymptotic_v12-v1/00000/047E357A-E6C3-E511-9783-001F29082E76.root',
@@ -148,12 +152,13 @@ process.es_prefer_es_pool = cms.ESPrefer( "PoolDBESSource", "es_pool" )
 
 process.TFileService = cms.Service("TFileService",
         closeFileFast = cms.untracked.bool(True),
-        fileName = cms.string('analyze.root'))
+        fileName = cms.string('analyzeNC.root'))
 
 #process.analyze = cms.EDAnalyzer("AnalyzeTP",
 #        triggerPrimitives = cms.InputTag("simHcalTriggerPrimitiveDigis", "" , "HFCALIB"))
 process.tree = cms.EDAnalyzer("JetHFCalib",
         triggerPrimitives = cms.InputTag("simHcalTriggerPrimitiveDigis", "" , "HFCALIB"),
+        eTriggerPrimitives = cms.InputTag("ecalDigis:EcalTriggerPrimitives"),
         genSrc = cms.InputTag("ak4GenJetsNoNu","","HLT"),
         doClosure = cms.untracked.bool(False)
 )

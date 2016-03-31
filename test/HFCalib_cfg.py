@@ -12,8 +12,8 @@ process.GlobalTag.globaltag = '80X_mcRun2_asymptotic_v0'
 process.options   = cms.untracked.PSet( wantSummary = cms.untracked.bool(True) )
 process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
 
-process.load("CondCore.DBCommon.CondDBSetup_cfi")
-process.load("CondCore.DBCommon.CondDBCommon_cfi")
+#process.load("CondCore.DBCommon.CondDBSetup_cfi")
+#process.load("CondCore.DBCommon.CondDBCommon_cfi")
 
 
 process.source = cms.Source("PoolSource",

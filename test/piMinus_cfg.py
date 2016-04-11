@@ -10,7 +10,7 @@ process.MessageLogger.cerr.FwkReport.reportEvery = 100
 process.load('Configuration.StandardSequences.Services_cff')
 process.load('Configuration.Geometry.GeometryExtended2016Reco_cff')
 process.load('Configuration.StandardSequences.MagneticField_AutoFromDBCurrent_cff')
-#process.load('Configuration.StandardSequences.EndOfProcess_cff')
+process.load('Configuration.StandardSequences.EndOfProcess_cff')
 process.load('Configuration.StandardSequences.RawToDigi_cff')
 
 process.load("Configuration.StandardSequences.FrontierConditions_GlobalTag_condDBv2_cff")
@@ -50,10 +50,6 @@ process.es_pool = cms.ESSource("PoolDBESSource",
 process.es_prefer_es_pool = cms.ESPrefer( "PoolDBESSource", "es_pool" )
 
 
-process.load('EventFilter.L1TXRawToDigi.caloLayer1Stage2Digis_cfi')
-
-process.load('L1Trigger.L1TCaloLayer1.simCaloStage2Layer1Digis_cfi')
-
 
 process.TFileService = cms.Service("TFileService",
         closeFileFast = cms.untracked.bool(True),
@@ -61,10 +57,10 @@ process.TFileService = cms.Service("TFileService",
 )
 
 process.tree = cms.EDAnalyzer("PionCalibrations",
-        triggerPrimitives = cms.InputTag("simHcalTriggerPrimitiveDigis"),
+        triggerPrimitives = cms.InputTag("simHcalTriggerPrimitiveDigis","","HFCALIB"),
         #triggerPrimitives = cms.InputTag("hcalDigis"),
-        eTriggerPrimitives = cms.InputTag("simEcalTriggerPrimitiveDigis"),
-        #eTriggerPrimitives = cms.InputTag("ecalDigis:EcalTriggerPrimitives"),
+        #eTriggerPrimitives = cms.InputTag("simEcalTriggerPrimitiveDigis"),
+        eTriggerPrimitives = cms.InputTag("ecalDigis:EcalTriggerPrimitives"),
         genSrc = cms.InputTag("genParticles"),
         doClosure = cms.untracked.bool(False)
 )
@@ -72,8 +68,10 @@ process.tree = cms.EDAnalyzer("PionCalibrations",
 
 #process.p = cms.Path(process.hcalDigis * process.ecalDigis * process.tree )
 #process.p = cms.Path(process.hcalDigis * process.simHcalTriggerPrimitiveDigis * process.ecalDigis * process.tree )
-process.p = cms.Path(process.l1tCaloLayer1Digis * process.tree)
+#process.p = cms.Path(process.l1tCaloLayer1Digis * process.tree)
+process.p = cms.Path(process.hcalDigis * process.ecalDigis * process.simHcalTriggerPrimitiveDigis *process.tree)
+
 #process.p = cms.Path(process.simHcalTriggerPrimitiveDigis * process.l1tCaloLayer1Digis* process.tree)
 
 #process.p = cms.Path(process.l1tCaloLayer1Digis*process.simCaloStage2Layer1Digis*process.rctDigis * process.tree)
-# print process.dumpPython()
+print process.dumpPython()

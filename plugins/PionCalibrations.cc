@@ -273,7 +273,7 @@ PionCalibrations::analyze(const edm::Event& event, const edm::EventSetup& setup)
 		tp_version_ = id.version();
 		tp_soi_ = digi.SOI_compressedEt();
                 hTowerETCode[iphi][ieta] = tp_et_*2; //add "uncompressed et" e.g. divide this by two later for 0.5 GeV precision 
-                if (tp_et_>2 || ieta<1 ||iphi<0 ||ieta>55){
+                if ( ieta<0 ||iphi<0 ||ieta>55){
                         cout<<"Original iEta: "<< tp_ieta_ <<" is transformed to "<<ieta<<" for saving to vector; Real Eta: "<<tp_eta_<<endl;
                         cout<<"Original iPhi: "<< tp_iphi_ <<" is transformed to "<<iphi<<" for saving to vector; Real Phi: "<<tp_phi_<<endl;
                 }
@@ -295,11 +295,11 @@ PionCalibrations::analyze(const edm::Event& event, const edm::EventSetup& setup)
 		int ieta = TPGEtaRange(etp_ieta_); // get rid of negative etas
 		etp_phi_ = convertTPGPhi(iphi);//should require zero index
 		etp_eta_ = convertTPGEta(ieta);//should not allow negatives Range 0-55 (only EBEE)
-		if (etp_et_>2 || ieta<1 ||iphi<0 ||ieta>55){
+		if ( ieta<0 ||iphi<0 ||ieta>55){
 			cout<<"Original iEta: "<< etp_ieta_ <<" is transformed to "<<ieta<<" for saving to vector; Real Eta: "<<etp_eta_<<endl;
 			cout<<"Original iPhi: "<< etp_iphi_ <<" is transformed to "<<iphi<<" for saving to vector; Real Phi: "<<etp_phi_<<endl;
 		}
-		eTowerETCode[iphi][ieta] = ecalet; //compressed et!!! easily save the et in a vector of ints 
+		eTowerETCode[iphi][ieta] = ecalet; //compressed et!!! easily save the et in a vector of ints (divinde by 2 later) 
 		Etps_->Fill();
 	}
 
@@ -341,6 +341,7 @@ PionCalibrations::analyze(const edm::Event& event, const edm::EventSetup& setup)
 			}
 		}
 		//FILL ISOLATION PROCEDURE
+		//LSB = 0.5 
 		l1_summed55_h_=TPGh5x5_*0.5;
 		l1_summed55_e_=TPGe5x5_*0.5;
 		l1_summed55_=TPG5x5_*0.5;

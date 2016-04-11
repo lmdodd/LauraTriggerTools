@@ -17,7 +17,8 @@ process.load("Configuration.StandardSequences.FrontierConditions_GlobalTag_condD
 process.GlobalTag.globaltag = '80X_mcRun2_asymptotic_v6'
 
 process.options   = cms.untracked.PSet( wantSummary = cms.untracked.bool(True) )
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(100) )
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(1000) )
+#process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
 
 process.load("CondCore.DBCommon.CondDBSetup_cfi")
 process.load("CondCore.DBCommon.CondDBCommon_cfi")
@@ -39,7 +40,7 @@ process.simHcalTriggerPrimitiveDigis.FrontEndFormatError = cms.bool(False)
 
 process.load("Configuration.Geometry.GeometryExtended2016Reco_cff")
 
-process.es_pool = cms.ESSource("PoolDBESSource",
+process.es_pool = cms.ESSource("PoolDBESSource", # DOES THIS WORK???? FIXME 
      process.CondDBSetup,
      timetype = cms.string('runnumber'),
      toGet = cms.VPSet(

@@ -59,6 +59,9 @@
 // class declaration
 //
 
+using namespace std;
+using namespace edm;
+
 class PionCalibrations : public edm::EDAnalyzer {
 	public:
 		explicit PionCalibrations(const edm::ParameterSet&);
@@ -78,6 +81,13 @@ class PionCalibrations : public edm::EDAnalyzer {
 		bool detid_;
 		double threshold_;
 		bool doClosure_;
+
+		//The square sums
+		vector<vector<unsigned int>> eTowerETCode;
+		vector<vector<unsigned int>> eCorrTowerETCode;
+		vector<vector<unsigned int>> hTowerETCode;
+		vector<vector<unsigned int>> hCorrTowerETCode;
+
 
 		int event_;
 
@@ -131,7 +141,7 @@ class PionCalibrations : public edm::EDAnalyzer {
 
 
 unsigned int const PionCalibrations::N_TOWER_PHI = 72;
-unsigned int const PionCalibrations::N_TOWER_ETA = 82;
+unsigned int const PionCalibrations::N_TOWER_ETA = 82; //41 towers! This includes HF  
 
 PionCalibrations::PionCalibrations(const edm::ParameterSet& config) :
 	edm::EDAnalyzer(),
@@ -140,7 +150,11 @@ PionCalibrations::PionCalibrations(const edm::ParameterSet& config) :
 	genSrc_(consumes<std::vector<reco::GenParticle>>(config.getParameter<edm::InputTag>("genSrc"))),
 	detid_(config.getUntrackedParameter<bool>("useDetIdForUncompression", true)),
 	threshold_(config.getUntrackedParameter<double>("threshold", 0.)),
-	doClosure_(config.getUntrackedParameter<bool>("doClosure", false))
+	doClosure_(config.getUntrackedParameter<bool>("doClosure", false)),
+	eTowerETCode(N_TOWER_PHI, vector<unsigned int>(N_TOWER_ETA)),
+	eCorrTowerETCode(N_TOWER_PHI, vector<unsigned int>(N_TOWER_ETA)),
+	hTowerETCode(N_TOWER_PHI, vector<unsigned int>(N_TOWER_ETA)),
+	hCorrTowerETCode(N_TOWER_PHI, vector<unsigned int>(N_TOWER_ETA))
 {
 	edm::Service<TFileService> fs;
 
@@ -197,7 +211,6 @@ PionCalibrations::~PionCalibrations() {}
 	void
 PionCalibrations::analyze(const edm::Event& event, const edm::EventSetup& setup)
 {
-	using namespace edm;
 
 	event_ = event.id().event();
 
@@ -257,12 +270,21 @@ PionCalibrations::analyze(const edm::Event& event, const edm::EventSetup& setup)
 		if (tp_et_ < threshold_) continue;
 		tp_ieta_ = id.ieta();
 		tp_iphi_ = id.iphi();
-
-		tp_phi_ = convertTPGPhi(id.iphi());
-		tp_eta_ = convertTPGEta(id.ieta());
+                if (abs(tp_ieta_)>28) continue; //ignore HF for now in HCAL vecotr 
+                // TPG iEta starts at 0 and goes to 55 for ECAL; FIXME in helpers? Will be different for hcal 
+                // TPG iPhi starts at 1 and goes to 72.  Let's index starting at zero.
+                int ieta = TPGEtaRange(tp_ieta_);//avoid negative eta
+                int iphi =  tp_iphi_-1; //zero index
+		tp_eta_ = convertTPGEta(ieta); //FIXME
+		tp_phi_ = convertTPGPhi(id.iphi()); //FIXME
 		tp_depth_ = id.depth();
 		tp_version_ = id.version();
 		tp_soi_ = digi.SOI_compressedEt();
+                hTowerETCode[iphi][ieta] = tp_et_*2; //add "uncompressed et" e.g. divide this by two later for 0.5 GeV precision 
+                if (tp_et_>2 || ieta<1 ||iphi<0 ||ieta>55){
+                        cout<<"Original iEta: "<< tp_ieta_ <<" is transformed to "<<ieta<<" for saving to vector; Real Eta: "<<tp_eta_<<endl;
+                        cout<<"Original iPhi: "<< tp_iphi_ <<" is transformed to "<<iphi<<" for saving to vector; Real Phi: "<<tp_phi_<<endl;
+                }
 
 		Htps_->Fill();
 
@@ -270,8 +292,42 @@ PionCalibrations::analyze(const edm::Event& event, const edm::EventSetup& setup)
 	}//end for of hcal digis
 
 	for (const auto& Edigi: *Edigis) {
-		double ecalet = Edigi.compressedEt()*0.5;
-		std::cout<<"ECalET et: "<< ecalet<<std::endl;
+		double ecalet = Edigi.compressedEt(); //0.5 GeV LSB
+		//std::cout<<"ECalET et: "<< ecalet<<std::endl;
+		etp_et_ = ecalet;
+		etp_ieta_ = Edigi.id().ieta();
+		etp_iphi_ = Edigi.id().iphi();
+		// TPG iPhi starts at 1 and goes to 72.  Let's index starting at zero.
+		// TPG iEta starts at 0 and goes to 55 for ECAL; FIXME in helpers? Will be different for hcal 
+		int iphi =  etp_iphi_ -1; //zero index
+		int ieta = TPGEtaRange(etp_ieta_); // get rid of negative etas
+		etp_phi_ = convertTPGPhi(Edigi.id().iphi());
+		etp_eta_ = convertTPGEta(Edigi.id().ieta());
+		if (etp_et_>2 || ieta<1 ||iphi<0 ||ieta>55){
+			cout<<"Original iEta: "<< etp_ieta_ <<" is transformed to "<<ieta<<" for saving to vector; Real Eta: "<<etp_eta_<<endl;
+			cout<<"Original iPhi: "<< etp_iphi_ <<" is transformed to "<<iphi<<" for saving to vector; Real Phi: "<<etp_phi_<<endl;
+		}
+		eTowerETCode[iphi][ieta] = ecalet; //compressed et!!! easily save the et in a vector of ints 
+		Etps_->Fill();
+	}
+
+	for (const auto& pion: *objects){
+		l1_summed33_=0; //Look at two different area sums- 7x7 too big 
+		l1_summed55_=0;
+		if (std::abs(pion.eta())>2.976) continue; //ignore HF pions for now go up to ieta 29 boundary, include 28. 
+		gen_pt_=pion.pt();
+		gen_et_=pion.et();
+		gen_eta_=pion.eta();
+		gen_phi_=pion.phi();
+		gen_ieta_=convertHFGenEta(pion.eta());
+		gen_iphi_=convertGenPhi(pion.phi());
+
+
+		for (const auto& digi: *digis) { //sum over hcal
+
+		}
+
+
 	}
 
 

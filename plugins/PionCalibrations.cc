@@ -321,8 +321,8 @@ PionCalibrations::analyze(const edm::Event& event, const edm::EventSetup& setup)
 
 		for (int j = -5; j < 6; ++j) {//phi
 			for (int k = -5; k < 6; ++k) { //eta
-				int tpgsquarephi= gen_ieta_;
-				int tpgsquareeta= gen_iphi_;	
+				int tpgsquarephi= gen_ieta_+j;
+				int tpgsquareeta= gen_iphi_+k;	
 				if (tpgsquarephi==-1) {tpgsquarephi=71;}
 				if (tpgsquarephi==-2) {tpgsquarephi=70;}
 				if (tpgsquarephi==-3) {tpgsquarephi=69;}
@@ -345,9 +345,9 @@ PionCalibrations::analyze(const edm::Event& event, const edm::EventSetup& setup)
 		l1_summed55_h_=TPGh5x5_*0.5;
 		l1_summed55_e_=TPGe5x5_*0.5;
 		l1_summed55_=TPG5x5_*0.5;
+		matched_->Fill();
 	}
 
-	matched_->Fill();
 }
 
 void

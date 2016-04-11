@@ -49,19 +49,19 @@ int convertGenPhi(double genPhi) {
 
 double convertHFTPGEta( int tpgEta){
 	const double hfEtaValues[13] = {
-		2.976, //Boundary for 29/30 - we skip eta 29
-		3.152,
-		3.327,
-		3.503,
-		3.677,
-		3.853, 
-		4.027,
-		4.204, 
-		4.377,
-		4.552,
-		4.730,
-		4.903,
-		5.205 //End of HF
+		2.964, //Boundary for 29/30 - we skip eta 29
+		3.139,
+		3.314,
+		3.489,
+		3.664,
+		3.839, 
+		4.013,
+		4.191, 
+		4.363,
+		4.538,
+		4.716,
+		4.889,
+		5.191 //End of HF
 	};
 	if (tpgEta<0){
 		int ieta=abs(tpgEta+30);
@@ -75,19 +75,19 @@ double convertHFTPGEta( int tpgEta){
 
 int convertHFGenEta(double genEta) {
 	const double hfEtaValues[13] = {
-		2.976, //Boundary for 29/30 - we skip eta 29
-		3.152,
-		3.327,
-		3.503,
-		3.677,
-		3.853, 
-		4.027,
-		4.204, 
-		4.377,
-		4.552,
-		4.730,
-		4.903,
-		5.205 //End of HF
+                2.964, //Boundary for 29/30 - we skip eta 29
+                3.139,
+                3.314,
+                3.489,
+                3.664,
+                3.839,
+                4.013,
+                4.191,
+                4.363,
+                4.538,
+                4.716,
+                4.889,
+                5.191 //End of HF
 	};
 	if (genEta > 0){ 
 		for (int n=0; n<13; n++){
@@ -172,19 +172,20 @@ double convertRegionEta(int iEta) {
 
 double convertTPGEta(int iEta) {
 	// 0-27 are negative eta values, 28-55 are positive eta values
+
 	int correctedIndex = iEta < 28 ? -(iEta - 27) : iEta - 28;
 
 	double etaValue = -9;
 	if (correctedIndex < 20) {
 		etaValue = 0.0435 + correctedIndex * 0.087;
 	} else {
-		const double endcapEtaValues[8] = {
+		const double endcapEtaValues[8] = {  //not boundary values!!! 
 			1.785,
 			1.880,
 			1.9865,
 			2.1075,
-			2.247,
-			2.411,
+			2.247, //or 2.252??? HArdcoded table sent by Jeremy has different eta bound than online response 
+			2.411, //or 2.416??? Hardcoded table sent by Jeremy has different eta bound than online response 
 			2.575,
 			2.825
 		};

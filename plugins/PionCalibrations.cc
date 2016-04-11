@@ -44,8 +44,7 @@
 #include "Geometry/HcalTowerAlgo/interface/HcalTrigTowerGeometry.h"
 #include "Geometry/Records/interface/CaloGeometryRecord.h"
 
-
-#include "DataFormats/JetReco/interface/GenJet.h"
+#include "DataFormats/HepMCCandidate/interface/GenParticle.h"
 
 #include "L1Trigger/LauraTriggerTools/interface/helpers.h"
 
@@ -73,9 +72,9 @@ class PionCalibrations : public edm::EDAnalyzer {
 		virtual void analyze(const edm::Event&, const edm::EventSetup&);
 
 		// ----------member data ---------------------------
-		edm::EDGetTokenT<std::vector<reco::GenJet>> genSrc_;
-		edm::InputTag digis_;
-		edm::InputTag Edigis_;
+		edm::EDGetTokenT<HcalTrigPrimDigiCollection> digis_;
+		edm::EDGetTokenT<EcalTrigPrimDigiCollection> Edigis_;
+		edm::EDGetTokenT<std::vector<reco::GenParticle>> genSrc_;
 		bool detid_;
 		double threshold_;
 		bool doClosure_;
@@ -83,13 +82,13 @@ class PionCalibrations : public edm::EDAnalyzer {
 		int event_;
 
 
-		TTree *jets_;
-		double jet_pt_;
-		double jet_et_;
-		double jet_eta_;
-		double jet_phi_;
-		int jet_ieta_;
-		int jet_iphi_;
+		TTree *pions_;
+		double pion_pt_;
+		double pion_et_;
+		double pion_eta_;
+		double pion_phi_;
+		int pion_ieta_;
+		int pion_iphi_;
 
 		TTree *matched_;
 		double gen_et_;
@@ -114,6 +113,12 @@ class PionCalibrations : public edm::EDAnalyzer {
 		int tp_soi_;
 		double tp_et_;
 
+		double etp_et_;
+		int etp_ieta_;
+		int etp_iphi_;
+		double etp_phi_;
+		double etp_eta_;
+	
 		TTree *ev_;
 		double ev_tp_v0_et_;
 		double ev_tp_v1_et_;
@@ -130,18 +135,15 @@ unsigned int const PionCalibrations::N_TOWER_ETA = 82;
 
 PionCalibrations::PionCalibrations(const edm::ParameterSet& config) :
 	edm::EDAnalyzer(),
-	digis_(config.getParameter<edm::InputTag>("triggerPrimitives")),
-	Edigis_(config.getParameter<edm::InputTag>("eTriggerPrimitives")),
+	digis_(consumes<HcalTrigPrimDigiCollection>(config.getParameter<edm::InputTag>("triggerPrimitives"))),
+	Edigis_(consumes<EcalTrigPrimDigiCollection>(config.getParameter<edm::InputTag>("eTriggerPrimitives"))),
+	genSrc_(consumes<std::vector<reco::GenParticle>>(config.getParameter<edm::InputTag>("genSrc"))),
 	detid_(config.getUntrackedParameter<bool>("useDetIdForUncompression", true)),
 	threshold_(config.getUntrackedParameter<double>("threshold", 0.)),
 	doClosure_(config.getUntrackedParameter<bool>("doClosure", false))
 {
 	edm::Service<TFileService> fs;
 
-	genSrc_    = mayConsume<std::vector<reco::GenJet> >(config.getParameter<edm::InputTag>("genSrc"));
-
-	consumes<HcalTrigPrimDigiCollection>(digis_);
-	consumes<EcalTrigPrimDigiCollection>(Edigis_);
 
 	Htps_ = fs->make<TTree>("Htps", "Trigger primitives");
 	Htps_->Branch("event", &event_);
@@ -157,14 +159,11 @@ PionCalibrations::PionCalibrations(const edm::ParameterSet& config) :
 
 	Etps_ = fs->make<TTree>("Etps", "Trigger primitives");
 	Etps_->Branch("event", &event_);
-	Etps_->Branch("ieta", &tp_ieta_);
-	Etps_->Branch("iphi", &tp_iphi_);
-	Etps_->Branch("phi", &tp_phi_);
-	Etps_->Branch("eta", &tp_eta_);
-	Etps_->Branch("depth", &tp_depth_);
-	Etps_->Branch("version", &tp_version_);
-	Etps_->Branch("soi", &tp_soi_);
-	Etps_->Branch("et", &tp_et_);
+	Etps_->Branch("ieta", &etp_ieta_);
+	Etps_->Branch("iphi", &etp_iphi_);
+	Etps_->Branch("phi", &etp_phi_);
+	Etps_->Branch("eta", &etp_eta_);
+	Etps_->Branch("et", &etp_et_);
 
 	ev_ = fs->make<TTree>("evs", "Event quantities");
 	ev_->Branch("event", &event_);
@@ -172,13 +171,13 @@ PionCalibrations::PionCalibrations(const edm::ParameterSet& config) :
 	ev_->Branch("tp_v1_et", &ev_tp_v1_et_);
 
 
-	jets_ = fs->make<TTree>("jets", "Jet quantities");
-	jets_->Branch("event", &event_);
-	jets_->Branch("et" , &jet_et_);
-	jets_->Branch("eta" , &jet_eta_);
-	jets_->Branch("phi" , &jet_phi_);
-	jets_->Branch("ieta" , &jet_ieta_);
-	jets_->Branch("iphi" , &jet_iphi_);
+	pions_ = fs->make<TTree>("pions", "Pion quantities");
+	pions_->Branch("event", &event_);
+	pions_->Branch("et" , &pion_et_);
+	pions_->Branch("eta" , &pion_eta_);
+	pions_->Branch("phi" , &pion_phi_);
+	pions_->Branch("ieta" , &pion_ieta_);
+	pions_->Branch("iphi" , &pion_iphi_);
 
 	matched_ = fs->make<TTree>("matched", "Matched quantities");
 	matched_->Branch("event", &event_);
@@ -203,33 +202,35 @@ PionCalibrations::analyze(const edm::Event& event, const edm::EventSetup& setup)
 	event_ = event.id().event();
 
 	Handle<HcalTrigPrimDigiCollection> digis;
-	if (!event.getByLabel(digis_, digis)) {
+	if (!event.getByToken(digis_, digis)) {
 		LogError("PionCalibrations") <<
-			"Can't find hcal trigger primitive digi collection with tag '" <<
-			digis_ << "'" << std::endl;
+			"Can't find hcal trigger primitive digi collection"<<std::endl;
 		return;
 	}
 
 	Handle<EcalTrigPrimDigiCollection> Edigis;
-	if (!event.getByLabel(Edigis_, Edigis)) {
+	if (!event.getByToken(Edigis_, Edigis)) {
 		LogError("PionCalibrations") <<
-			"Can't find ecal trigger primitive digi collection with tag '" <<
-			Edigis_ << "'" << std::endl;
+			"Can't find ecal trigger primitive digi collection" << std::endl;
 		return;
 	}
 
-	edm::Handle<std::vector<reco::GenJet> > objects;
-	event.getByToken(genSrc_,objects);
+	edm::Handle<std::vector<reco::GenParticle> > objects;
+	if (!event.getByToken(genSrc_, objects)) {
+		LogError("PionCalibrations") <<
+			"Can't find genParticle collection" << std::endl;
+		return;
+	}
 
+        
 
-	for(const auto& jet: *objects){
-		if (std::abs(jet.eta())>2.976) continue;
-		jet_et_=jet.et();
-		jet_eta_=jet.eta();
-		jet_phi_=jet.phi();
-		jet_ieta_=convertHFGenEta(jet.eta());
-		jet_iphi_=convertGenPhi(jet.phi());
-		jets_->Fill();
+	for(const auto& pion: *objects){
+		pion_et_=pion.et();
+		pion_eta_=pion.eta();
+		pion_phi_=pion.phi();
+		pion_ieta_=convertGenEta(pion.eta());
+		pion_iphi_=convertGenPhi(pion.phi());
+		pions_->Fill();
 	}
 
 
@@ -246,7 +247,7 @@ PionCalibrations::analyze(const edm::Event& event, const edm::EventSetup& setup)
 
 	std::map<HcalTrigTowerDetId, HcalTriggerPrimitiveDigi> ttids;
 	for (const auto& digi: *digis) {
-		if (digi.id().version() == 1 || digi.id().ieta()>29) continue; //No HF
+		//	if (digi.id().version() == 1 || digi.id().ieta()>29) continue; //No HF
 		ttids[digi.id()] = digi;
 		HcalTrigTowerDetId id = digi.id();
 		if (detid_)
@@ -258,7 +259,7 @@ PionCalibrations::analyze(const edm::Event& event, const edm::EventSetup& setup)
 		tp_iphi_ = id.iphi();
 
 		tp_phi_ = convertTPGPhi(id.iphi());
-		tp_eta_ = convertHFTPGEta(id.ieta());
+		tp_eta_ = convertTPGEta(id.ieta());
 		tp_depth_ = id.depth();
 		tp_version_ = id.version();
 		tp_soi_ = digi.SOI_compressedEt();
@@ -266,65 +267,73 @@ PionCalibrations::analyze(const edm::Event& event, const edm::EventSetup& setup)
 		Htps_->Fill();
 
 
-	}//end for of digis
+	}//end for of hcal digis
 
-	for(const auto& jet: *objects){
-		l1_summed33_=0;
-		l1_summed55_=0;
-
-		if (std::abs(jet.eta())>2.976) continue; //no HF pions
-		gen_pt_=jet.pt();
-		gen_et_=jet.et();
-		gen_eta_=jet.eta();
-		gen_phi_=jet.phi();
-		gen_ieta_=convertHFGenEta(jet.eta());
-		gen_iphi_=convertGenPhi(jet.phi());
-
-		for (const auto& digi: *digis) {
-			if (digi.id().version() == 1||digi.id().ieta()>29){ //1x1 upgrade or ignore 29
-				HcalTrigTowerDetId id = digi.id();
-				if (detid_) tp_et_ = decoder->hcaletValue(id, digi.t0());
-				else tp_et_ = decoder->hcaletValue(tp_ieta_, tp_iphi_, tp_soi_);
-				int absieta = abs(tp_ieta_)-30;
-				if (doClosure_){
-					if (tp_et_<5)  tp_et_ = tp_et_*bin0[absieta] ; 
-					else if (tp_et_<20)  tp_et_ = tp_et_*bin0[absieta] ; 
-					else if (tp_et_<30)  tp_et_ = tp_et_*bin1[absieta] ; 
-					else if (tp_et_<50)  tp_et_ = tp_et_*bin2[absieta] ; 
-					else  tp_et_ = tp_et_*bin3[absieta] ; 
-					tp_et_= (int (tp_et_*2))/2.0;
-				}
-
-
-				if (tp_et_ < threshold_) continue;
-				double ecalet=0;	
-				if (id.ieta()==29)continue;
-
-				if (id.ieta()<29){
-					for (const auto& Edigi: *Edigis) {
-						if (Edigi.id().ieta()==id.ieta() && Edigi.id().iphi()==id.iphi()){ 
-							ecalet = Edigi.compressedEt()*0.5;
-							std::cout<<"ECalET set: "<< ecalet<<std::endl;
-							break;}
-					}
-				}
-				if (gen_ieta_==30&&abs(gen_iphi_-id.iphi())<2) {
-					if ((id.ieta()==28||abs(gen_ieta_-id.ieta())<2)) {l1_summed33_+=tp_et_;l1_summed33_+=ecalet;}
-					if ((id.ieta()==28||id.ieta()==27||abs(gen_ieta_-id.ieta())<2)) {l1_summed55_+=tp_et_;l1_summed55_+=ecalet;}
-				} 
-				else if (gen_ieta_==31&&abs(gen_iphi_-id.iphi())<2) {
-					if ((abs(gen_ieta_-id.ieta())<2)) l1_summed33_+=tp_et_;
-					if ((id.ieta()==28||abs(gen_ieta_-id.ieta())<2)) {l1_summed55_+=tp_et_;l1_summed55_+=ecalet;}
-				} 
-				else{
-					if (abs(gen_ieta_-id.ieta())<2&&abs(gen_iphi_-id.iphi())<2) l1_summed33_+=tp_et_;
-					if (abs(gen_ieta_-id.ieta())<3&&abs(gen_iphi_-id.iphi())<3) l1_summed55_+=tp_et_;
-				}
-			}//end 1x1 upgrade
-
-		}
-		matched_->Fill();
+	for (const auto& Edigi: *Edigis) {
+		double ecalet = Edigi.compressedEt()*0.5;
+		std::cout<<"ECalET et: "<< ecalet<<std::endl;
 	}
+
+
+	/*
+	   for(const auto& jet: *objects){
+	   l1_summed33_=0;
+	   l1_summed55_=0;
+
+	   if (std::abs(jet.eta())>2.976) continue; //no HF pions
+	   gen_pt_=jet.pt();
+	   gen_et_=jet.et();
+	   gen_eta_=jet.eta();
+	   gen_phi_=jet.phi();
+	   gen_ieta_=convertHFGenEta(jet.eta());
+	   gen_iphi_=convertGenPhi(jet.phi());
+
+	   for (const auto& digi: *digis) {
+	   if (digi.id().version() == 1||digi.id().ieta()>29){ //1x1 upgrade or ignore 29
+	   HcalTrigTowerDetId id = digi.id();
+	   if (detid_) tp_et_ = decoder->hcaletValue(id, digi.t0());
+	   else tp_et_ = decoder->hcaletValue(tp_ieta_, tp_iphi_, tp_soi_);
+	   int absieta = abs(tp_ieta_)-30;
+	   if (doClosure_){
+	   if (tp_et_<5)  tp_et_ = tp_et_*bin0[absieta] ; 
+	   else if (tp_et_<20)  tp_et_ = tp_et_*bin0[absieta] ; 
+	   else if (tp_et_<30)  tp_et_ = tp_et_*bin1[absieta] ; 
+	   else if (tp_et_<50)  tp_et_ = tp_et_*bin2[absieta] ; 
+	   else  tp_et_ = tp_et_*bin3[absieta] ; 
+	   tp_et_= (int (tp_et_*2))/2.0;
+	   }
+
+
+	   if (tp_et_ < threshold_) continue;
+	   double ecalet=0;	
+	   if (id.ieta()==29)continue;
+
+	   if (id.ieta()<29){
+	   for (const auto& Edigi: *Edigis) {
+	   if (Edigi.id().ieta()==id.ieta() && Edigi.id().iphi()==id.iphi()){ 
+	   ecalet = Edigi.compressedEt()*0.5;
+	   std::cout<<"ECalET set: "<< ecalet<<std::endl;
+	   break;}
+	   }
+	   }
+	   if (gen_ieta_==30&&abs(gen_iphi_-id.iphi())<2) {
+	   if ((id.ieta()==28||abs(gen_ieta_-id.ieta())<2)) {l1_summed33_+=tp_et_;l1_summed33_+=ecalet;}
+	   if ((id.ieta()==28||id.ieta()==27||abs(gen_ieta_-id.ieta())<2)) {l1_summed55_+=tp_et_;l1_summed55_+=ecalet;}
+	   } 
+	   else if (gen_ieta_==31&&abs(gen_iphi_-id.iphi())<2) {
+	   if ((abs(gen_ieta_-id.ieta())<2)) l1_summed33_+=tp_et_;
+	   if ((id.ieta()==28||abs(gen_ieta_-id.ieta())<2)) {l1_summed55_+=tp_et_;l1_summed55_+=ecalet;}
+	   } 
+	   else{
+	   if (abs(gen_ieta_-id.ieta())<2&&abs(gen_iphi_-id.iphi())<2) l1_summed33_+=tp_et_;
+	   if (abs(gen_ieta_-id.ieta())<3&&abs(gen_iphi_-id.iphi())<3) l1_summed55_+=tp_et_;
+	   }
+	   }//end 1x1 upgrade
+
+	   }
+	   matched_->Fill();
+	   }
+	   */
 
 
 

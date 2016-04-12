@@ -17,8 +17,8 @@ process.load("Configuration.StandardSequences.FrontierConditions_GlobalTag_condD
 process.GlobalTag.globaltag = '80X_mcRun2_asymptotic_v6'
 
 process.options   = cms.untracked.PSet( wantSummary = cms.untracked.bool(True) )
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(1000) )
-#process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
+#process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(1000) )
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
 
 process.source = cms.Source("PoolSource",
         fileNames = cms.untracked.vstring(
@@ -74,4 +74,4 @@ process.p = cms.Path(process.hcalDigis * process.ecalDigis * process.simHcalTrig
 #process.p = cms.Path(process.simHcalTriggerPrimitiveDigis * process.l1tCaloLayer1Digis* process.tree)
 
 #process.p = cms.Path(process.l1tCaloLayer1Digis*process.simCaloStage2Layer1Digis*process.rctDigis * process.tree)
-print process.dumpPython()
+#print process.dumpPython()

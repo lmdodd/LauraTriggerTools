@@ -46,6 +46,9 @@ int convertHFGenEta(double genEta);
 // Convert a physical phi into a trigger phi (L. Dodd)
 int convertGenPhi(double genPhi);
 
+// Convert a physical eta into a trigger ieta (L. Dodd)
+int convertTPGGenEta(double genEta);
+
 // Convert a physical eta into an HF index (L. Dodd)
 double convertHFTPGEta( int tpgEta);
 

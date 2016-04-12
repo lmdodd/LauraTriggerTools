@@ -307,22 +307,25 @@ PionCalibrations::analyze(const edm::Event& event, const edm::EventSetup& setup)
 		l1_summed55_=0;
 		l1_summed55_e_=0;
 		l1_summed55_h_=0;
-		if (std::abs(pion.eta())>2.976) continue; //ignore HF pions for now go up to ieta 29 boundary, include 28. 
+		if (std::abs(pion.eta())>2.868) continue; //ignore HF pions for now go up to ieta 29 boundary, include 28. 
+		cout<<"GenParticle PdgId: "<< pion.pdgId() <<endl;
 		gen_pt_=pion.pt();
-		gen_et_=pion.et();
 		gen_eta_=pion.eta();
 		gen_phi_=pion.phi();
-		gen_ieta_=convertGenEta(pion.eta());
+		cout<<"Pion Eta: "<<gen_eta_<<endl;
+		gen_ieta_=convertTPGGenEta(pion.eta());
+		cout<<"iEta: "<<gen_ieta_<<endl; 
 		gen_iphi_=convertGenPhi(pion.phi());
+		cout<<"GenParticle Pt: "<< gen_pt_ <<" Eta: "<<gen_eta_<<" Phi: "<<gen_phi_<<" iEta: "<<gen_ieta_<<" iPhi: "<<gen_iphi_ <<endl;
+                //iETA NEGATIVE
 		double TPGh5x5_=0;
 		double TPGe5x5_=0;
 		double TPG5x5_=0;
 
-
 		for (int j = -5; j < 6; ++j) {//phi
 			for (int k = -5; k < 6; ++k) { //eta
-				int tpgsquarephi= gen_ieta_+j;
-				int tpgsquareeta= gen_iphi_+k;	
+				int tpgsquarephi= gen_ieta_+k;
+				int tpgsquareeta= gen_iphi_+j;	
 				if (tpgsquarephi==-1) {tpgsquarephi=71;}
 				if (tpgsquarephi==-2) {tpgsquarephi=70;}
 				if (tpgsquarephi==-3) {tpgsquarephi=69;}

@@ -7,7 +7,7 @@ process.load('FWCore/MessageService/MessageLogger_cfi')
 process.MessageLogger.cerr.FwkReport.reportEvery = 100
 
 process.load("Configuration.StandardSequences.FrontierConditions_GlobalTag_condDBv2_cff")
-process.GlobalTag.globaltag = '80X_mcRun2_asymptotic_v0'
+process.GlobalTag.globaltag = '80X_mcRun2_asymptotic_v6'
 
 process.options   = cms.untracked.PSet( wantSummary = cms.untracked.bool(True) )
 process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
@@ -23,6 +23,8 @@ process.source = cms.Source("PoolSource",
 )
 
 
+# To get CaloTPGTranscoder
+process.load('Configuration.StandardSequences.RawToDigi_cff')
 process.load('L1Trigger.RegionalCaloTrigger.rctDigis_cfi')
 process.rctDigis.hcalDigis = cms.VInputTag(cms.InputTag("simHcalTriggerPrimitiveDigis"))
 
@@ -31,9 +33,9 @@ process.simHcalTriggerPrimitiveDigis.inputLabel = cms.VInputTag( cms.InputTag('s
 # process.simHcalTriggerPrimitiveDigis.inputLabel = cms.VInputTag( cms.InputTag('simHcalDigis'), cms.InputTag('simHcalDigis') )
 process.simHcalTriggerPrimitiveDigis.FrontEndFormatError = cms.bool(False)
 
+
+
 process.load("Configuration.Geometry.GeometryExtended2016Reco_cff")
-process.XMLIdealGeometryESSource.geomXMLFiles.remove('Geometry/HcalCommonData/data/Phase0/hcalRecNumbering.xml')
-process.XMLIdealGeometryESSource.geomXMLFiles.append('Geometry/HcalCommonData/data/Phase0/hcalRecNumberingRun2.xml')
 
 process.es_pool = cms.ESSource("PoolDBESSource",
      process.CondDBSetup,
@@ -41,6 +43,9 @@ process.es_pool = cms.ESSource("PoolDBESSource",
      toGet = cms.VPSet(
          cms.PSet(record = cms.string("HcalLutMetadataRcd"),
              tag = cms.string("HcalLutMetadata_HFTP_1x1")
+             ),
+         cms.PSet(record = cms.string("HcalElectronicsMapRcd"),
+             tag = cms.string("HcalElectronicsMap_HFTP_1x1")
              )
          ),
      connect = cms.string('frontier://FrontierProd/CMS_CONDITIONS'),
@@ -48,14 +53,14 @@ process.es_pool = cms.ESSource("PoolDBESSource",
      )
 process.es_prefer_es_pool = cms.ESPrefer( "PoolDBESSource", "es_pool" )
 
+
 process.TFileService = cms.Service("TFileService",
         closeFileFast = cms.untracked.bool(True),
-        fileName = cms.string($outputFileName))
+        fileName = cms.string("$outputFileName"))
 
-#process.analyze = cms.EDAnalyzer("AnalyzeTP",
-#        triggerPrimitives = cms.InputTag("simHcalTriggerPrimitiveDigis", "" , "HFCALIB"))
 process.tree = cms.EDAnalyzer("JetHFCalib",
         triggerPrimitives = cms.InputTag("simHcalTriggerPrimitiveDigis", "" , "HFCALIB"),
+        eTriggerPrimitives = cms.InputTag("ecalDigis:EcalTriggerPrimitives"),
         genSrc = cms.InputTag("ak4GenJetsNoNu","","HLT"),
         doClosure = cms.untracked.bool(False)
 )
@@ -63,6 +68,6 @@ process.tree = cms.EDAnalyzer("JetHFCalib",
 
 
 #process.p = cms.Path(process.simHcalTriggerPrimitiveDigis * process.analyze * process.analyzeOld)
-process.p = cms.Path(process.simHcalTriggerPrimitiveDigis * process.tree )
+process.p = cms.Path(process.ecalDigis * process.hcalDigis * process.simHcalTriggerPrimitiveDigis * process.tree )
 
 # print process.dumpPython()

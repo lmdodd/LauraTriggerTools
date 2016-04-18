@@ -180,6 +180,7 @@ PionCalibrations::PionCalibrations(const edm::ParameterSet& config) :
 	pions_ = fs->make<TTree>("pions", "Pion quantities");
 	pions_->Branch("event", &event_);
 	pions_->Branch("et" , &pion_et_);
+	pions_->Branch("pt" , &pion_pt_);
 	pions_->Branch("eta" , &pion_eta_);
 	pions_->Branch("phi" , &pion_phi_);
 	pions_->Branch("ieta" , &pion_ieta_);
@@ -236,9 +237,10 @@ PionCalibrations::analyze(const edm::Event& event, const edm::EventSetup& setup)
 
 	for(const auto& pion: *objects){
 		pion_et_=pion.et();
+		pion_pt_=pion.pt();
 		pion_eta_=pion.eta();
 		pion_phi_=pion.phi();
-		pion_ieta_=convertGenEta(pion.eta());
+		pion_ieta_=convertTPGGenEta(pion.eta());
 		pion_iphi_=convertGenPhi(pion.phi());
 		pions_->Fill();
 	}
@@ -342,10 +344,11 @@ PionCalibrations::analyze(const edm::Event& event, const edm::EventSetup& setup)
 		double TPG5x5_=0;
 		double cTPG5x5_=0;
 
-		for (int j = -5; j < 6; ++j) {//phi
-			for (int k = -5; k < 6; ++k) { //eta
-				int tpgsquarephi= gen_ieta_+k;
-				int tpgsquareeta= gen_iphi_+j;	
+		for (int j = -2; j < 3; ++j) {//eta
+			for (int k = -2; k < 3; ++k) { //phi
+				int tpgsquarephi= gen_iphi_+k;
+				int tpgsquareeta= gen_ieta_+j;	
+
 				if (tpgsquarephi==-1) {tpgsquarephi=71;}
 				if (tpgsquarephi==-2) {tpgsquarephi=70;}
 				if (tpgsquarephi==-3) {tpgsquarephi=69;}

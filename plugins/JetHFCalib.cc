@@ -304,7 +304,7 @@ JetHFCalib::analyze(const edm::Event& event, const edm::EventSetup& setup)
 					for (const auto& Edigi: *Edigis) {
 						if (Edigi.id().ieta()==id.ieta() && Edigi.id().iphi()==id.iphi()){ 
 							ecalet = Edigi.compressedEt()*0.5;
-							std::cout<<"ECalET set: "<< ecalet<<std::endl;
+							//std::cout<<"ECalET set: "<< ecalet<<std::endl;
 							break;}
 					}
 				}

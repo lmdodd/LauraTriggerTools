@@ -238,57 +238,49 @@ JetHFCalib::analyze(const edm::Event& event, const edm::EventSetup& setup)
 		if (digi.id().version() == 1){ //1x1 upgrade
 			ttids[digi.id()] = digi;
 			HcalTrigTowerDetId id = digi.id();
+			tp_ieta_ = id.ieta();
+			tp_iphi_ = id.iphi();
+			tp_phi_ = convertTPGPhi(id.iphi());
+			tp_eta_ = convertHFTPGEta(id.ieta()); //gets gen value
+			tp_depth_ = id.depth();
+			tp_version_ = id.version();
+			tp_soi_ = digi.SOI_compressedEt();
+
+
 			if (detid_)
 				tp_et_ = decoder->hcaletValue(id, digi.t0());
 			else
 				tp_et_ = decoder->hcaletValue(tp_ieta_, tp_iphi_, tp_soi_);
 			if (tp_et_ < threshold_)
 				continue;
-			tp_ieta_ = id.ieta();
-			//int bin = 0;
-			//if (doClosure_){
-			//	if (tp_et<20)  tp_et_tmp = tp_et_ *bin0[absieta] ; 
-			//	else if (tp_et<30)  tp_et_tmp = tp_et_ *bin1[absieta] ; 
-			//	else if (tp_et<50)  tp_et_tmp = tp_et_ *bin2[absieta] ; 
-			//	else if  tp_et_tmp = tp_et_ *bin3[absieta] ; 
-			//}
-
-			tp_ieta_ = id.ieta();
-			tp_iphi_ = id.iphi();
-			tp_phi_ = convertTPGPhi(id.iphi());
-			tp_eta_ = convertHFTPGEta(id.ieta());
-			tp_depth_ = id.depth();
-			tp_version_ = id.version();
-			tp_soi_ = digi.SOI_compressedEt();
-
 			tps_->Fill();
 		}//end 1x1 upgrade
-
-
-
-
-
 	}//end for of digis
+
 	for(const auto& jet: *objects){
 		l1_summed33_=0;
 		l1_summed55_=0;
 		l1_summed77_=0;
 
-		if (std::abs(jet.eta())<2.976) continue;
+		if (std::abs(jet.eta())<2.967) continue;//ignore jets in ieta 29
 		gen_pt_=jet.pt();
 		gen_et_=jet.et();
 		gen_eta_=jet.eta();
 		gen_phi_=jet.phi();
 		gen_ieta_=convertHFGenEta(jet.eta());
 		gen_iphi_=convertGenPhi(jet.phi());
+		std::cout<<"JET INFO \t  gen_ieta: "<<gen_ieta_<<" eta: "<< gen_eta_<<std::endl;
 		for (const auto& digi: *digis) {
-			if (digi.id().version() == 1||digi.id().ieta()<29){ //1x1 upgrade or ignore 29
+			if (digi.id().version() == 1||abs(digi.id().ieta())<29){ //1x1 upgrade or ignore < 29
 				HcalTrigTowerDetId id = digi.id();
 				if (detid_) tp_et_ = decoder->hcaletValue(id, digi.t0());
-				else tp_et_ = decoder->hcaletValue(tp_ieta_, tp_iphi_, tp_soi_);
-				int absieta = abs(tp_ieta_)-30;
+				else tp_et_ = decoder->hcaletValue(id.ieta(), id.iphi(), digi.SOI_compressedEt());
+				int absieta = abs(id.ieta())-30;//how to find bin. ieta 30 ->bin 0
+				std::cout<<"TPG INFO \t  tpg_et: "<<tp_et_<<" ieta: "<< id.ieta()<<" iphi: "<<id.iphi()<<std::endl;
+				std::cout<<"TPG INFO \t  version: "<<id.version()<<std::endl;
 				if (doClosure_){
-					if (tp_et_<20)  tp_et_ = tp_et_*bin0[absieta] ; 
+					if (tp_et_<5)  tp_et_ = tp_et_; 
+					else if (tp_et_<20)  tp_et_ = tp_et_*bin0[absieta] ; 
 					else if (tp_et_<30)  tp_et_ = tp_et_*bin1[absieta] ; 
 					else if (tp_et_<50)  tp_et_ = tp_et_*bin2[absieta] ; 
 					else  tp_et_ = tp_et_*bin3[absieta] ; 
@@ -298,22 +290,22 @@ JetHFCalib::analyze(const edm::Event& event, const edm::EventSetup& setup)
 
 				if (tp_et_ < threshold_) continue;
 			  	double ecalet=0;	
-				if (id.ieta()==29)continue;
+				if (abs(id.ieta())==29 || gen_ieta_==-999) continue;
 
-				if (id.ieta()<29){
+				if (abs(id.ieta())<29){ //if in endcap find ecal et for that tp!!!
 					for (const auto& Edigi: *Edigis) {
 						if (Edigi.id().ieta()==id.ieta() && Edigi.id().iphi()==id.iphi()){ 
 							ecalet = Edigi.compressedEt()*0.5;
-							//std::cout<<"ECalET set: "<< ecalet<<std::endl;
+							std::cout<<"ECal Tp \t  et: "<< ecalet<<" ieta: "<<Edigi.id().ieta()<<" iphi: "<<Edigi.id().iphi()<<std::endl;
 							break;}
 					}
 				}
-				if (gen_ieta_==30&&abs(gen_iphi_-id.iphi())<2) {
+				if (abs(gen_ieta_)==30&&abs(gen_iphi_-id.iphi())<2) {
 					if ((id.ieta()==28||abs(gen_ieta_-id.ieta())<2)) {l1_summed33_+=tp_et_;l1_summed33_+=ecalet;}
 					if ((id.ieta()==28||id.ieta()==27||abs(gen_ieta_-id.ieta())<2)) {l1_summed55_+=tp_et_;l1_summed55_+=ecalet;}
 					if ((id.ieta()==26||id.ieta()==28||id.ieta()==27||abs(gen_ieta_-id.ieta())<2)) {l1_summed77_+=tp_et_;l1_summed77_+=ecalet; }
 				} 
-				else if (gen_ieta_==31&&abs(gen_iphi_-id.iphi())<2) {
+				else if (abs(gen_ieta_)==31&&abs(gen_iphi_-id.iphi())<2) {
 					if ((abs(gen_ieta_-id.ieta())<2)) l1_summed33_+=tp_et_;
 					if ((id.ieta()==28||abs(gen_ieta_-id.ieta())<2)) {l1_summed55_+=tp_et_;l1_summed55_+=ecalet;}
 					if ((id.ieta()==28||id.ieta()==27||abs(gen_ieta_-id.ieta())<2)) {l1_summed77_+=tp_et_;l1_summed77_+=ecalet; }

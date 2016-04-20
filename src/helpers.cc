@@ -145,7 +145,7 @@ int convertHFGenEta(double genEta) {
 	if (genEta > 0){ 
 		for (int n=0; n<13; n++){
 			if (genEta<hfEtaValues[n]) {
-				int hfEta = 28 + n; //FIXME
+				int hfEta = 29 + n; //FIXME
 				return hfEta;
 				break;
 			}
@@ -154,7 +154,7 @@ int convertHFGenEta(double genEta) {
 	else if (genEta<0){
 		for (int n=0; n<13; n++){
 			if  (std::abs(genEta) < hfEtaValues[n]){
-				int hfEta = -28-n; //FIXME
+				int hfEta = -29-n; //FIXME
 				return hfEta;
 				break;
 			}

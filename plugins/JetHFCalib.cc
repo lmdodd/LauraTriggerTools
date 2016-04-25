@@ -268,12 +268,13 @@ JetHFCalib::analyze(const edm::Event& event, const edm::EventSetup& setup)
 		gen_phi_=jet.phi();
 		gen_ieta_=convertHFGenEta(jet.eta());
 		gen_iphi_=convertGenPhi(jet.phi());
-		std::cout<<"JET INFO \t  gen_ieta: "<<gen_ieta_<<" eta: "<< gen_eta_<<std::endl;
+		//std::cout<<"JET INFO \t  gen_ieta: "<<gen_ieta_<<" eta: "<< gen_eta_<<std::endl;
 		for (const auto& digi: *digis) {
 			if (digi.id().version() == 1||abs(digi.id().ieta())<29){ //1x1 upgrade or ignore < 29
 				HcalTrigTowerDetId id = digi.id();
 				double tempet = decoder->hcaletValue(id, digi.t0());
-			        tp_et_ = (floor(tempet*2)) / 2.0;	
+			        tp_et_ = tempet; 
+			        //tp_et_ = (floor(tempet*2)) / 2.0;	
 				int absieta = abs(id.ieta())-30;//how to find bin. ieta 30 ->bin 0
 				//if (tp_et_>1){
 				//std::cout<<"TPG INFO \t  tpg_et: "<<tp_et_<<" ieta: "<< id.ieta()<<" iphi: "<<id.iphi()<<std::endl;
@@ -304,19 +305,19 @@ JetHFCalib::analyze(const edm::Event& event, const edm::EventSetup& setup)
 							else if (ptbin>8) ptbin=8;
 							ecalet *= ecal[ptbin*9+ieta]; //compressed et!!! easily save the et in a vector of ints (divinde by 2 later) 
 
-							if (ecalet>1) std::cout<<"ECal Tp \t  et: "<< ecalet<<" ieta: "<<Edigi.id().ieta()<<" iphi: "<<Edigi.id().iphi()<<std::endl;
+							//if (ecalet>1) std::cout<<"ECal Tp \t  et: "<< ecalet<<" ieta: "<<Edigi.id().ieta()<<" iphi: "<<Edigi.id().iphi()<<std::endl;
 							break;}
 					}
 				}
 				if (abs(gen_ieta_)==30&&abs(gen_iphi_-id.iphi())<2) {
-					if ((id.ieta()==28||abs(gen_ieta_-id.ieta())<2)) {l1_summed33_+=tp_et_;l1_summed33_+=ecalet;}
-					if ((id.ieta()==28||id.ieta()==27||abs(gen_ieta_-id.ieta())<2)) {l1_summed55_+=tp_et_;l1_summed55_+=ecalet;}
-					if ((id.ieta()==26||id.ieta()==28||id.ieta()==27||abs(gen_ieta_-id.ieta())<2)) {l1_summed77_+=tp_et_;l1_summed77_+=ecalet; }
+					if ((abs(id.ieta())==28||abs(gen_ieta_-id.ieta())<2)) {l1_summed33_+=tp_et_;l1_summed33_+=ecalet;}
+					if ((abs(id.ieta())==28||abs(id.ieta())==27||abs(gen_ieta_-id.ieta())<2)) {l1_summed55_+=tp_et_;l1_summed55_+=ecalet;}
+					if ((abs(id.ieta())==26||abs(id.ieta())==28||abs(id.ieta())==27||abs(gen_ieta_-id.ieta())<2)) {l1_summed77_+=tp_et_;l1_summed77_+=ecalet; }
 				} 
 				else if (abs(gen_ieta_)==31&&abs(gen_iphi_-id.iphi())<2) {
 					if ((abs(gen_ieta_-id.ieta())<2)) l1_summed33_+=tp_et_;
-					if ((id.ieta()==28||abs(gen_ieta_-id.ieta())<2)) {l1_summed55_+=tp_et_;l1_summed55_+=ecalet;}
-					if ((id.ieta()==28||id.ieta()==27||abs(gen_ieta_-id.ieta())<2)) {l1_summed77_+=tp_et_;l1_summed77_+=ecalet; }
+					if ((abs(id.ieta())==28||abs(gen_ieta_-id.ieta())<2)) {l1_summed55_+=tp_et_;l1_summed55_+=ecalet;}
+					if ((abs(id.ieta())==28||abs(id.ieta())==27||abs(gen_ieta_-id.ieta())<2)) {l1_summed77_+=tp_et_;l1_summed77_+=ecalet; }
 				} 
 				else{
 					if (abs(gen_ieta_-id.ieta())<2&&abs(gen_iphi_-id.iphi())<2) l1_summed33_+=tp_et_;

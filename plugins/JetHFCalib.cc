@@ -122,6 +122,8 @@ class JetHFCalib : public edm::EDAnalyzer {
 		float bin1[12] = { 2.23,1.78,1.58,1.51,1.45,1.48,1.51,1.60,1.73,1.87,2.46,2.59}; 
 		float bin2[12] = { 2.30,1.70,1.59,1.51,1.47,1.47,1.53,1.58,1.67,1.88,2.51,2.49}; 
 		float bin3[12] = { 2.19,1.59,1.56,1.49,1.44,1.47,1.51,1.56,1.66,1.83,2.39,2.43}; 
+
+		float ecal[252] = {1.1847, 1.16759, 1.17779, 1.19955, 1.21125, 1.214, 1.21503, 1.22515, 1.24151, 1.27836, 1.30292, 1.33526, 1.42338, 1.4931, 1.49597, 1.50405, 1.52785, 1.81552, 1.59856, 1.75692, 1.76496, 1.77562, 1.69527, 1.66827, 1.61861, 1.56645, 1.56646, 1.56646, 1.1351, 1.12589, 1.12834, 1.13725, 1.14408, 1.1494, 1.14296, 1.14852, 1.1578, 1.17634, 1.18038, 1.19386, 1.23758, 1.27605, 1.27818, 1.28195, 1.34881, 1.71053, 1.37338, 1.52571, 1.54801, 1.53316, 1.4397, 1.40497, 1.37743, 1.33914, 1.33914, 1.33914, 1.18043, 1.17823, 1.1751, 1.17608, 1.19152, 1.196, 1.20125, 1.2068, 1.22584, 1.22476, 1.22395, 1.22302, 1.25137, 1.28097, 1.29871, 1.2862, 1.33489, 1.60937, 1.28365, 1.41367, 1.42521, 1.42041, 1.36784, 1.34922, 1.32754, 1.29825, 1.29825, 1.29825, 1.11664, 1.11852, 1.11861, 1.12367, 1.12405, 1.14814, 1.14304, 1.15337, 1.16607, 1.18698, 1.17048, 1.17463, 1.2185, 1.23842, 1.23214, 1.24744, 1.30047, 1.47152, 1.22868, 1.33121, 1.34841, 1.35178, 1.30048, 1.28537, 1.27012, 1.24159, 1.24159, 1.24159, 1.08422, 1.08146, 1.08706, 1.08906, 1.08636, 1.10092, 1.10363, 1.11102, 1.1186, 1.13301, 1.12369, 1.14377, 1.16477, 1.17801, 1.18782, 1.17168, 1.24593, 1.36835, 1.20252, 1.28349, 1.29828, 1.30328, 1.26848, 1.25817, 1.2464, 1.22259, 1.22259, 1.22259, 1.07444, 1.06774, 1.06883, 1.0707, 1.07881, 1.08859, 1.08285, 1.08747, 1.09736, 1.10678, 1.10008, 1.10717, 1.12858, 1.15383, 1.15826, 1.14855, 1.19911, 1.32567, 1.17553, 1.25976, 1.27926, 1.28459, 1.24524, 1.23706, 1.22597, 1.20006, 1.20006, 1.20006, 1.06224, 1.05968, 1.05767, 1.06254, 1.06729, 1.0691, 1.07125, 1.07312, 1.08124, 1.08966, 1.08695, 1.08826, 1.10611, 1.13115, 1.12641, 1.13093, 1.17074, 1.28958, 1.16217, 1.22844, 1.24812, 1.25352, 1.22065, 1.21287, 1.20544, 1.18344, 1.18344, 1.18344, 1.03589, 1.03224, 1.03229, 1.03623, 1.03979, 1.04403, 1.04574, 1.049, 1.04821, 1.06183, 1.0588, 1.06655, 1.08582, 1.10289, 1.10052, 1.10506, 1.143, 1.27373, 1.1459, 1.2156, 1.23455, 1.23968, 1.20753, 1.20127, 1.19629, 1.16809, 1.16809, 1.16809, 1.03456, 1.02955, 1.03079, 1.03509, 1.03949, 1.0437, 1.04236, 1.04486, 1.0517, 1.05864, 1.05516, 1.06167, 1.07738, 1.0985, 1.09317, 1.09559, 1.13557, 1.26076, 1.14118, 1.20545, 1.22137, 1.22802, 1.19936, 1.19676, 1.19088, 1.16709, 1.16709, 1.16709};
 };
 
 
@@ -247,10 +249,7 @@ JetHFCalib::analyze(const edm::Event& event, const edm::EventSetup& setup)
 			tp_soi_ = digi.SOI_compressedEt();
 
 
-			if (detid_)
-				tp_et_ = decoder->hcaletValue(id, digi.t0());
-			else
-				tp_et_ = decoder->hcaletValue(tp_ieta_, tp_iphi_, tp_soi_);
+			tp_et_ = decoder->hcaletValue(id, digi.t0());
 			if (tp_et_ < threshold_)
 				continue;
 			tps_->Fill();
@@ -273,11 +272,13 @@ JetHFCalib::analyze(const edm::Event& event, const edm::EventSetup& setup)
 		for (const auto& digi: *digis) {
 			if (digi.id().version() == 1||abs(digi.id().ieta())<29){ //1x1 upgrade or ignore < 29
 				HcalTrigTowerDetId id = digi.id();
-				if (detid_) tp_et_ = decoder->hcaletValue(id, digi.t0());
-				else tp_et_ = decoder->hcaletValue(id.ieta(), id.iphi(), digi.SOI_compressedEt());
+				double tempet = decoder->hcaletValue(id, digi.t0());
+			        tp_et_ = (floor(tempet*2)) / 2.0;	
 				int absieta = abs(id.ieta())-30;//how to find bin. ieta 30 ->bin 0
-				std::cout<<"TPG INFO \t  tpg_et: "<<tp_et_<<" ieta: "<< id.ieta()<<" iphi: "<<id.iphi()<<std::endl;
-				std::cout<<"TPG INFO \t  version: "<<id.version()<<std::endl;
+				//if (tp_et_>1){
+				//std::cout<<"TPG INFO \t  tpg_et: "<<tp_et_<<" ieta: "<< id.ieta()<<" iphi: "<<id.iphi()<<std::endl;
+				//std::cout<<"TPG INFO \t  version: "<<id.version()<<std::endl;
+				//}
 				if (doClosure_){
 					if (tp_et_<5)  tp_et_ = tp_et_; 
 					else if (tp_et_<20)  tp_et_ = tp_et_*bin0[absieta] ; 
@@ -295,8 +296,15 @@ JetHFCalib::analyze(const edm::Event& event, const edm::EventSetup& setup)
 				if (abs(id.ieta())<29){ //if in endcap find ecal et for that tp!!!
 					for (const auto& Edigi: *Edigis) {
 						if (Edigi.id().ieta()==id.ieta() && Edigi.id().iphi()==id.iphi()){ 
-							ecalet = Edigi.compressedEt()*0.5;
-							std::cout<<"ECal Tp \t  et: "<< ecalet<<" ieta: "<<Edigi.id().ieta()<<" iphi: "<<Edigi.id().iphi()<<std::endl;
+							ecalet = Edigi.compressedEt();
+							int ieta = abs(id.ieta())-1;
+							int temp = floor((ecalet*0.5)/5);
+							int ptbin = temp -1;
+							if (ptbin<0) ptbin=0; 
+							else if (ptbin>8) ptbin=8;
+							ecalet *= ecal[ptbin*9+ieta]; //compressed et!!! easily save the et in a vector of ints (divinde by 2 later) 
+
+							if (ecalet>1) std::cout<<"ECal Tp \t  et: "<< ecalet<<" ieta: "<<Edigi.id().ieta()<<" iphi: "<<Edigi.id().iphi()<<std::endl;
 							break;}
 					}
 				}

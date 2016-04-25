@@ -30,7 +30,6 @@ process.load("Configuration.Geometry.GeometryExtended2016Reco_cff")
 process.load("SimCalorimetry.HcalTrigPrimProducers.hcaltpdigi_cff")
 
 
-process.load("Configuration.Geometry.GeometryExtended2016Reco_cff")
 
 process.es_pool = cms.ESSource("PoolDBESSource",
      process.CondDBSetup,

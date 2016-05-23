@@ -262,10 +262,7 @@ PionCalibrations::analyze(const edm::Event& event, const edm::EventSetup& setup)
 		//	if (digi.id().version() == 1 || digi.id().ieta()>29) continue; //No HF
 		ttids[digi.id()] = digi;
 		HcalTrigTowerDetId id = digi.id();
-		if (detid_)
-			tp_et_ = decoder->hcaletValue(id, digi.t0());
-		else
-			tp_et_ = decoder->hcaletValue(tp_ieta_, tp_iphi_, tp_soi_);
+		tp_et_ = decoder->hcaletValue(id, digi.t0());
 		if (tp_et_ < threshold_) continue;
 		tp_ieta_ = id.ieta();
 		tp_iphi_ = id.iphi();

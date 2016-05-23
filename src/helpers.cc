@@ -311,12 +311,12 @@ int TPGEtaRange(int ieta){
 
 int HCALTPGEtaRange(int ieta){
 	unsigned int iEta = 0;
-	// So here, -28 becomes 0.  -1 be comes 27.  +1 becomes 28. +28 becomes 55.
-	// And we have mapped [-28, -1], [1, 28] onto [0, 55]   
+	// So here, -41 becomes 0.  -1 becomes 40.  +1 becomes 41. +41 becomes 81.
+	// And we have mapped [-41, -1], [1, 41] onto [0, 81]   
 	if(ieta < 0)
-		iEta = ieta + 28;
+		iEta = ieta + 41;
 	else if(ieta > 0)
-		iEta = ieta + 27;
+		iEta = ieta + 40;
 	return iEta;
 }
 

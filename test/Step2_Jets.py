@@ -38,10 +38,10 @@ else:
 #Get NTUPLE                 #
 #####################################
 
-hist_ptb1 = ntuple_file.Get("hist_ptb6")
-hist_ptb2 = ntuple_file.Get("hist_ptb0")
-hist_ptb3 = ntuple_file.Get("hist_ptb1")
-hist_ptb4 = ntuple_file.Get("hist_ptb2")
+hist_ptb1 = ntuple_file.Get("hist_ptb0")
+hist_ptb2 = ntuple_file.Get("hist_ptb1")
+hist_ptb3 = ntuple_file.Get("hist_ptb2")
+hist_ptb4 = ntuple_file.Get("hist_ptb3")
 
 canvas = ROOT.TCanvas("asdf", "adsf", 800, 800)
 canvas
@@ -74,7 +74,7 @@ legend1.AddEntry(hist_ptb2, "Gen Jet Pt=20-30 GeV")
 legend1.AddEntry(hist_ptb3, "Gen Jet Pt=30-50 GeV")
 legend1.AddEntry(hist_ptb4, "Gen Jet Pt>50 GeV")
 legend1.Draw("same")
-saveas='SF_trigger.png'
+saveas=saveWhere+'SF_trigger.png'
 canvas.SaveAs(saveas)
 canvas
 

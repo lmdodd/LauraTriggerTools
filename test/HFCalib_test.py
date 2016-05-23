@@ -56,7 +56,7 @@ process.tree = cms.EDAnalyzer("JetHFCalib",
         triggerPrimitives = cms.InputTag("simHcalTriggerPrimitiveDigis", "" , "HFCALIB"),
         eTriggerPrimitives = cms.InputTag("ecalDigis:EcalTriggerPrimitives"),
         genSrc = cms.InputTag("ak4GenJetsNoNu","","HLT"),
-        doClosure = cms.untracked.bool(False)
+        doClosure = cms.untracked.bool(True)
 )
 
 

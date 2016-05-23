@@ -185,49 +185,46 @@ AnalyzeTP::analyze(const edm::Event& event, const edm::EventSetup& setup)
       tp_depth_ = id.depth();
       tp_version_ = id.version();
       tp_soi_ = digi.SOI_compressedEt();
-      if (detid_)
-         tp_et_ = decoder->hcaletValue(id, digi.t0());
-      else
-         tp_et_ = decoder->hcaletValue(tp_ieta_, tp_iphi_, tp_soi_);
+      tp_et_ = decoder->hcaletValue(id, digi.t0());
 
       if (tp_et_ < threshold_)
-         continue;
+	      continue;
 
       tps_->Fill();
 
       if (tp_version_ == 0 and abs(tp_ieta_) >= 29) {
-         ev_tp_v0_et_ += tp_et_;
+	      ev_tp_v0_et_ += tp_et_;
       } else if (tp_version_ == 1) {
-         ev_tp_v1_et_ += tp_et_;
+	      ev_tp_v1_et_ += tp_et_;
       }
 
       if (abs(tp_ieta_) >= 29 and tp_version_ == 0) {
-         std::set<HcalTrigTowerDetId> matches;
-         for (const auto& detid: tpd_geo->detIds(id)) {
-            for (const auto& ttid: tpd_geo->towerIds(detid)) {
-               if (ttid.version() == 1)
-                  matches.insert(ttid);
-            }
-         }
+	      std::set<HcalTrigTowerDetId> matches;
+	      for (const auto& detid: tpd_geo->detIds(id)) {
+		      for (const auto& ttid: tpd_geo->towerIds(detid)) {
+			      if (ttid.version() == 1)
+				      matches.insert(ttid);
+		      }
+	      }
 
-         m_ieta_ = tp_ieta_;
-         m_iphi_ = tp_iphi_;
-         new_et_ = 0;
-         new_count_ = 0;
-         old_et_ = tp_et_;
-         for (const auto& m: matches) {
-            new_et_ += decoder->hcaletValue(m, ttids[m].t0());
-            ++new_count_;
-         }
-         match_->Fill();
+	      m_ieta_ = tp_ieta_;
+	      m_iphi_ = tp_iphi_;
+	      new_et_ = 0;
+	      new_count_ = 0;
+	      old_et_ = tp_et_;
+	      for (const auto& m: matches) {
+		      new_et_ += decoder->hcaletValue(m, ttids[m].t0());
+		      ++new_count_;
+	      }
+	      match_->Fill();
       }
    }
 
    for (int i = -4; i <= 4; ++i) {
-      if (i == 0)
-         continue;
-      for (int j = 0; j < 18; ++j) {
-      }
+	   if (i == 0)
+		   continue;
+	   for (int j = 0; j < 18; ++j) {
+	   }
    }
 
    ev_->Fill();
@@ -235,11 +232,11 @@ AnalyzeTP::analyze(const edm::Event& event, const edm::EventSetup& setup)
 
 void
 AnalyzeTP::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
-  //The following says we do not know what parameters are allowed so do no validation
-  // Please change this to state exactly what you do use, even if it is no parameters
-  edm::ParameterSetDescription desc;
-  desc.setUnknown();
-  descriptions.addDefault(desc);
+	//The following says we do not know what parameters are allowed so do no validation
+	// Please change this to state exactly what you do use, even if it is no parameters
+	edm::ParameterSetDescription desc;
+	desc.setUnknown();
+	descriptions.addDefault(desc);
 }
 
 //define this as a plug-in

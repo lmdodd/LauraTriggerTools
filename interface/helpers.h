@@ -66,6 +66,7 @@ double getPhiTPG(int iPhi);
 // And we have mapped [-28, -1], [1, 28] onto [0, 55]   
 
 int TPGEtaRange(int ieta);
+int HCALTPGEtaRange(int ieta);
 
 double getEtaTPG(int ieta); 
 

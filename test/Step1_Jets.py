@@ -40,26 +40,26 @@ for i in range(0,7):
 for event in ntuple:
     if event.gen_ieta==-999 or event.l1_summed55<5 or event.gen_pt<5:
        continue
-    #if (event.gen_pt-event.l1_summed55)/event.gen_pt > 0.6:
-    #   continue
+    if (event.gen_pt-event.l1_summed55)/event.gen_pt < -0.5:
+       continue
     if event.gen_pt>20 and event.gen_pt<30:
-       ptb=0
-    elif event.gen_pt>30 and event.gen_pt<50:
        ptb=1
-    elif event.gen_pt>50:
+    elif event.gen_pt>30 and event.gen_pt<50:
        ptb=2
+    elif event.gen_pt>50:
+       ptb=3
     elif event.gen_pt>5 and event.gen_pt<20:
-       ptb=6
+       ptb=0
     SF=0.0
     reco=event.gen_pt
-    tpg=event.l1_summed55
+    tpg=event.l1_summed77
     SF = reco/tpg
     eta= abs(event.gen_ieta)-1
-    print eta
+    #print eta
     histos[ptb][eta].Fill(SF)
     
 print 'mean'
-for ptb in range(0,7):
+for ptb in range(0,4):
     print '\t'
     for eta in range(0,41):
         Mean =histos[ptb][eta].GetMean()
@@ -67,8 +67,13 @@ for ptb in range(0,7):
         text_file.write("%f, " % Mean)
         MeanError =histos[ptb][eta].GetMeanError()
         bin=eta+1
-        hist_ptb[ptb].SetBinContent(bin,Mean)
-        hist_ptb[ptb].SetBinError(bin,MeanError)
+	if bin==30:
+           Mean =histos[ptb][eta+1].GetMean()
+           hist_ptb[ptb].SetBinContent(bin,Mean)
+           hist_ptb[ptb].SetBinError(bin,MeanError)
+        else:
+           hist_ptb[ptb].SetBinContent(bin,Mean)
+           hist_ptb[ptb].SetBinError(bin,MeanError)
     save = 'hist_ptb%d.png' % ptb 
     hist_ptb[ptb].Draw("pE1")
     canvas.SaveAs(save) 
@@ -79,7 +84,7 @@ file=ROOT.TFile("outfile.root","RECREATE")
 file.cd()
 #
 
-for ptb in range(0,7):
+for ptb in range(0,4):
   hist_ptb[ptb].Write()
   for eta in range(0,41):
       histos[ptb][eta].Write()                 

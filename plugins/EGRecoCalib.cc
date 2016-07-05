@@ -41,9 +41,19 @@
 #include "CommonTools/UtilAlgos/interface/TFileService.h"
 #include "DataFormats/EcalDigi/interface/EcalDigiCollections.h"
 #include "DataFormats/HcalDigi/interface/HcalDigiCollections.h"
-#include "CondFormats/L1TObjects/interface/L1CaloHcalScale.h"
-#include "CondFormats/DataRecord/interface/L1CaloHcalScaleRcd.h"
+
+#include "CalibFormats/CaloTPG/interface/CaloTPGTranscoder.h"
+#include "CalibFormats/CaloTPG/interface/CaloTPGRecord.h"
+#include "CalibFormats/HcalObjects/interface/HcalDbRecord.h"
+#include "CalibFormats/HcalObjects/interface/HcalDbService.h"
+
 #include "FWCore/Framework/interface/ESHandle.h"
+
+#include "Geometry/CaloGeometry/interface/CaloGeometry.h"
+#include "Geometry/HcalTowerAlgo/interface/HcalGeometry.h"
+#include "Geometry/HcalTowerAlgo/interface/HcalTrigTowerGeometry.h"
+#include "Geometry/Records/interface/CaloGeometryRecord.h"
+
 
 typedef std::vector<edm::InputTag> VInputTag;
 //typedef std::vector<unsigned int> PackedUIntCollection;
@@ -63,11 +73,8 @@ class EGRecoCalib : public edm::EDAnalyzer {
 
 
 		TTree* tree;
-		InputTag scalerSrc_;
-		InputTag l1Digis_;
-		InputTag pvSrc_;
-		InputTag ecalSrc_;
-		InputTag hcalSrc_;
+		edm::EDGetToken ecalSrc_;
+		edm::EDGetToken hcalSrc_;
 
 		edm::EDGetToken recoSrc_;
 
@@ -80,14 +87,6 @@ class EGRecoCalib : public edm::EDAnalyzer {
 		unsigned int run_;
 		unsigned int lumi_;
 		unsigned long int event_;
-		unsigned int npvs_;
-		float instLumi_;
-
-
-		//L1 EG information
-		vector<float> egCandPt_;
-		vector<float> egCandEta_;
-		vector<float> egCandPhi_;
 
 		//Reco information
 		vector<float>* pts_;
@@ -145,7 +144,6 @@ class EGRecoCalib : public edm::EDAnalyzer {
 		//handles
 		Handle<L1CaloRegionCollection> newRegions;
 		Handle<L1CaloEmCollection> newEMCands;
-		Handle<LumiScalersCollection> lumiScalers;
 		Handle<reco::VertexCollection> vertices;
 		Handle<EcalTrigPrimDigiCollection> ecal;
 		Handle<HcalTrigPrimDigiCollection> hcal;
@@ -198,23 +196,6 @@ namespace {
 				}
 	};
 
-	// Turn a set of VInputTags into a colleciton of candidate pointers.
-	//std::vector<const reco::Candidate*> getCollections(
-	//		const edm::Event& evt, const VInputTag& collections) {
-//		std::vector<const reco::Candidate*> output;
-//		// Loop over collections
-//		for (size_t i = 0; i < collections.size(); ++i) {
-//			edm::Handle<edm::View<reco::Candidate> > handle;
-//			evt.getByLabel(collections[i], handle);
-//			// Loop over objects in current collection
-//			for (size_t j = 0; j < handle->size(); ++j) {
-//				const reco::Candidate& object = handle->at(j);
-//				output.push_back(&object);
-//			}
-//		}
-//		return output;
-//	}
-//
 }
 
 
@@ -224,6 +205,8 @@ EGRecoCalib::EGRecoCalib(const edm::ParameterSet& pset):
         eleLooseIdMapToken_(consumes<edm::ValueMap<bool> >(pset.getParameter<edm::InputTag>("eleLooseIdMap"))),
         eleMediumIdMapToken_(consumes<edm::ValueMap<bool> >(pset.getParameter<edm::InputTag>("eleMediumIdMap"))),
         eleTightIdMapToken_(consumes<edm::ValueMap<bool> >(pset.getParameter<edm::InputTag>("eleTightIdMap"))),
+        ecalSrc_(consumes<EcalTrigPrimDigiCollection>(pset.getParameter<edm::InputTag>("ecalSrc"))),
+        hcalSrc_(consumes<HcalTrigPrimDigiCollection>(pset.getParameter<edm::InputTag>("hcalSrc"))),
 	eTowerETCode(N_TOWER_PHI, vector<unsigned int>(N_TOWER_ETA)),
 	eCorrTowerETCode(N_TOWER_PHI, vector<unsigned int>(N_TOWER_ETA)),
 	hTowerETCode(N_TOWER_PHI, vector<unsigned int>(N_TOWER_ETA)),
@@ -241,8 +224,6 @@ EGRecoCalib::EGRecoCalib(const edm::ParameterSet& pset):
 	tree->Branch("run", &run_, "run/i");
 	tree->Branch("lumi", &lumi_, "lumi/i");
 	tree->Branch("evt", &event_, "evt/l");
-	tree->Branch("npvs", &npvs_, "npvs/i");
-	tree->Branch("instlumi", &instLumi_, "instlumi/F");
 
 	//calibration vectors
 	tree->Branch("TPGVeto", "std::vector<float>", &TPGVeto_); //calibrate event or not
@@ -260,20 +241,11 @@ EGRecoCalib::EGRecoCalib(const edm::ParameterSet& pset):
 	tree->Branch("recoGctEta", "std::vector<float>", &etas_);//reco eta
 	tree->Branch("recoGctPhi", "std::vector<float>", &phis_);//reco phi
 
-	tree->Branch("l1egPt", "std::vector<float>", &egCandPt_); //reco eg rct pt
-	tree->Branch("l1egEta", "std::vector<float>", &egCandEta_);//rct gct eta?
-	tree->Branch("l1egPhi", "std::vector<float>", &egCandPhi_);//rct gct phi?
-
 	//cTPG5x5
 	tree->Branch("cTPG5x5", "std::vector<int>", &cTPG5x5_);
 	tree->Branch("cTPGh5x5","std::vector<int>", &cTPGh5x5_);
 	tree->Branch("cTPGe5x5","std::vector<int>", &cTPGe5x5_);
 
-
-	scalerSrc_ = pset.exists("scalerSrc") ? pset.getParameter<InputTag>("scalerSrc") : InputTag("scalersRawToDigi");
-	pvSrc_ = pset.exists("pvSrc") ? pset.getParameter<InputTag>("pvSrc") : InputTag("offlineSlimmedPrimaryVertices");
-	ecalSrc_ = pset.exists("ecalSrc") ? pset.getParameter<InputTag>("ecalSrc"): InputTag("ecalDigis:EcalTriggerPrimitives");
-	hcalSrc_ = pset.exists("hcalSrc") ? pset.getParameter<InputTag>("hcalSrc"): InputTag("hcalDigis");
 
 	// Input variables
         recoSrc_    = mayConsume<edm::View<reco::GsfElectron> >(pset.getParameter<edm::InputTag>("recoSrc"));
@@ -304,30 +276,12 @@ void EGRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 	run_ = evt.id().run();
 	lumi_ = evt.id().luminosityBlock();
 	event_ = evt.id().event();
-	evt.getByLabel(scalerSrc_, lumiScalers);
-	evt.getByLabel("l1Digis", newRegions);
-	evt.getByLabel("l1Digis", newEMCands);
-	evt.getByLabel(pvSrc_, vertices);
-	evt.getByLabel(ecalSrc_, ecal);
-	evt.getByLabel(hcalSrc_, hcal);
-
-
-	// EVENT INFO
-	instLumi_ = -1;
-	npvs_ = 0;
-	npvs_ = vertices->size();
-
-	if (lumiScalers->size())
-		instLumi_ = lumiScalers->begin()->instantLumi();
-
+	evt.getByToken(ecalSrc_, ecal);
+	evt.getByToken(hcalSrc_, hcal);
 
 	//get reco eg pt
 	edm::Handle<edm::View<reco::GsfElectron> > objects;
         evt.getByToken(recoSrc_,objects);
-
-	//vector<const reco::Candidate*> objects = getCollections(
-	//		evt, recoSrc_);
-	//sort(objects.begin(), objects.end(), CandPtSorter());
 
         edm::Handle<edm::ValueMap<bool> > loose_id_decisions;
         edm::Handle<edm::ValueMap<bool> > medium_id_decisions;
@@ -337,30 +291,19 @@ void EGRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
         evt.getByToken(eleTightIdMapToken_,tight_id_decisions);
 
 
-	//Reset important things
-	//std::cout<<"Reset important things"<<std::endl;
-	//std::cout<<"Reset Reco"<<std::endl;
 	pts_->clear();
 	etas_->clear();
 	phis_->clear();
 
-	//std::cout<<"Reset EG"<<std::endl;
-	egCandPt_.clear();
-	egCandEta_.clear();
-	egCandPhi_.clear();
-
-	//std::cout<<"Reset TPG helpers"<<std::endl;
 	TPGVeto_.clear();
 	ptbin_.clear();
 
-	//std::cout<<"Reset maxTPGS"<<std::endl;
 	// TPG TESTING
 	maxTPGdR_.clear();
 	maxTPGPt_.clear();
 	maxTPGPt_eta_.clear();
 	maxTPGPt_phi_.clear();
 
-	//std::cout<<"Reset TPG5x5s"<<std::endl;
 	TPG5x5_.clear();
 	TPG5x5_gcteta_.clear();
 	TPG5x5_tpgeta_.clear();
@@ -403,17 +346,6 @@ void EGRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 		}
 	}
 
-	//EG cand vector filling
-	//std::cout<<"L1 EG Cands"<<std::endl;
-	for(L1CaloEmCollection::const_iterator egtCand =
-			newEMCands->begin();
-			egtCand != newEMCands->end(); egtCand++){
-		double eget = egPhysicalEt(*egtCand);
-		egCandPt_.push_back(eget);
-		egCandEta_.push_back(egtCand->regionId().ieta()); //should be gctEta?
-		egCandPhi_.push_back(egtCand->regionId().iphi()); //should be gctPhi?
-	}//end egtCAnd
-
 
 	//std::cout << "TPGS" << std::endl;
 	//std::cout << "ECAL TPGS" << std::endl;
@@ -451,21 +383,28 @@ void EGRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 	}//end ECAL TPGS
 
 	//	std::cout << "HCAL TPGS" << std::endl;
-	ESHandle<L1CaloHcalScale> hcalScale;
-	es.get<L1CaloHcalScaleRcd>().get(hcalScale);
+	ESHandle<CaloTPGTranscoder> decoder;
+	es.get<CaloTPGRecord>().get(decoder);
 
-	for (size_t i = 0; i < hcal->size(); ++i) {
-		int ieta = (*hcal)[i].id().ieta();
-		int iphi = (*hcal)[i].id().iphi();
+	ESHandle<HcalTrigTowerGeometry> tpd_geo;
+	es.get<CaloGeometryRecord>().get(tpd_geo);
+
+	std::map<HcalTrigTowerDetId, HcalTriggerPrimitiveDigi> ttids;
+	for (const auto& digi: *hcal) {
+		//	if (digi.id().version() == 1 || digi.id().ieta()>29) continue; //No HF
+		ttids[digi.id()] = digi;
+		HcalTrigTowerDetId id = digi.id();
+		float tp_et_ = decoder->hcaletValue(id, digi.t0());
+		if (tp_et_ < 0) continue;
+	        int ieta = id.ieta();
+	        int iphi = id.iphi();
 		int hniphi = iphi-1;
 		int hnieta = TPGEtaRange(ieta);
-		short absieta = std::abs((*hcal)[i].id().ieta());
-		short zside = (*hcal)[i].id().zside();
+		short absieta = std::abs(ieta);
 
 		if (ieta >= -1000 && ieta <= 1000 &&
 				iphi >= -1000 && ieta <= 1000) {
-			double energy = hcalScale->et(
-					(*hcal)[i].SOI_compressedEt(), absieta, zside);
+			double energy = tp_et_; 
 
 			hTowerETCode[hniphi][hnieta] = energy;
 			//fill corrected tpgs here
@@ -531,43 +470,6 @@ void EGRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 				}//end if
 			}//end ecal size
 		}//end ecal on
-		else{ //ECALOn ==false
-			//HCAL SF derivation
-			for (size_t j = 0; j < hcal->size(); ++j) {
-				int cal_ieta = (*hcal)[j].id().ieta();
-				int cal_iphi = (*hcal)[j].id().iphi();
-				int iphi = cal_iphi-1;
-				int ieta = TPGEtaRange(cal_ieta);
-				float phi = convertTPGPhi(iphi); //returns phi
-				float eta = convertTPGEta(ieta);
-				short absieta = std::abs((*hcal)[j].id().ieta());
-				short zside = (*hcal)[j].id().zside();
-
-				if (ieta >= -1000 && ieta <= 1000 &&
-						iphi >= -1000 && ieta <= 1000) {
-					double et = hcalScale->et(
-							(*hcal)[j].SOI_compressedEt(), absieta, zside); 
-
-					double deltaEta=(etas_->at(i) - eta);
-					double deltaPhi=reco::deltaPhi(phis_->at(i),phi);
-					double dR=sqrt( deltaEta*deltaEta + deltaPhi*deltaPhi);
-
-					if (dR<.2 && dR<closestDR && pts_->at(i)<127 && fabs(pts_->at(i)-et) < closestDRET) { //require dR<.5, closestDr that
-						closestDRET=abs(pts_->at(i)-et);
-						closestDR= dR;
-						match=j;
-						//maxHTPGPt = et;
-						//maxHTPGPt_phi = iphi;
-						//maxHTPGPt_eta = ieta;
-						maxTPGdR = closestDR;
-						maxTPGPt = et;
-						maxTPGPt_eta = ieta;
-						maxTPGPt_phi = iphi;
-					}//end if
-				}//end if et in range
-			}//end hcal size
-		} //end !ECALOn
-
 		if (match==-1){
 			maxTPGdR_.push_back(999);
 			maxTPGPt_.push_back(0);

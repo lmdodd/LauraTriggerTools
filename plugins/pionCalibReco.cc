@@ -467,7 +467,7 @@ void pionCalibReco::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 		}
 	}
 
-	if (maxTPGPt>0.5*(TPGH_+TPGE_)){TPGDiff_=1;}//Only look at tpgs where 90% is in central tpg
+	if (maxTPGPt>0.9*(TPGH_+TPGE_)){TPGDiff_=1;}//Only look at tpgs where 90% is in central tpg
 	//This works for gen studies probably not reco studies 
 
 	//std::cout<<"egt Cand"<<std::endl;

@@ -110,6 +110,7 @@ class PionCalibrations : public edm::EDAnalyzer {
 		double l1_summed55_;
 		double l1_summed55_e_;
 		double l1_summed55_h_;
+		double HoE_;
 		double sumCorr_;
 		double sumCorr_e_;
 		double sumCorr_h_;
@@ -198,6 +199,7 @@ PionCalibrations::PionCalibrations(const edm::ParameterSet& config) :
 	matched_->Branch("l1_summed55_e" , &l1_summed55_e_);
 	matched_->Branch("l1_summed55_h" , &l1_summed55_h_);
 	matched_->Branch("ptbin" , &ptbin_);
+	matched_->Branch("HoERatio" , &HoE_);
 	matched_->Branch("sumCorr" , &sumCorr_);
 	matched_->Branch("sumCorr_e" , &sumCorr_e_);
 	matched_->Branch("sumCorr_h" , &sumCorr_h_);
@@ -316,6 +318,7 @@ PionCalibrations::analyze(const edm::Event& event, const edm::EventSetup& setup)
 	}
 
 	for (const auto& pion: *objects){
+		HoE_=0;
 		l1_summed55_=0;
 		sumCorr_=0;
 		l1_summed55_e_=0;
@@ -380,6 +383,7 @@ PionCalibrations::analyze(const edm::Event& event, const edm::EventSetup& setup)
 		sumCorr_e_=cTPGe5x5_*0.5;
 		l1_summed55_=TPG5x5_*0.5;
 		sumCorr_=cTPG5x5_*0.5;
+		HoE_=TPGh5x5_/TPGe5x5_;
 		matched_->Fill();
 	}
 

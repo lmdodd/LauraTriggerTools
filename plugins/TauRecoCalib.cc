@@ -60,9 +60,6 @@ class TauRecoCalib : public edm::EDAnalyzer {
 		static const unsigned int N_TOWER_ETA;
 		void analyze(const edm::Event& evt, const edm::EventSetup& es);
 	private:
-		double egPhysicalEt(const L1CaloEmCand& cand) const {
-			return egLSB_*cand.rank();
-		}
 
 
 		TTree* tree;
@@ -147,14 +144,10 @@ class TauRecoCalib : public edm::EDAnalyzer {
 		vector<double> sinPhi;
 		vector<double> cosPhi;
 
-		int egammaSeed;
 		bool ECALOn;
 		bool v_off;
 		bool v1;
 		bool v3;
-
-		double egLSB_;
-		double regionLSB_;
 
 		double LSB = 0.5; //used
 
@@ -189,23 +182,6 @@ namespace {
 					return candA->pt() > candB->pt();
 				}
 	};
-
-	// Turn a set of VInputTags into a colleciton of candidate pointers.
-	std::vector<const reco::Candidate*> getCollections(
-			const edm::Event& evt, const VInputTag& collections) {
-		std::vector<const reco::Candidate*> output;
-		// Loop over collections
-		for (size_t i = 0; i < collections.size(); ++i) {
-			edm::Handle<edm::View<reco::Candidate> > handle;
-			evt.getByLabel(collections[i], handle);
-			// Loop over objects in current collection
-			for (size_t j = 0; j < handle->size(); ++j) {
-				const reco::Candidate& object = handle->at(j);
-				output.push_back(&object);
-			}
-		}
-		return output;
-	}
 
 }
 
@@ -270,10 +246,8 @@ TauRecoCalib::TauRecoCalib(const edm::ParameterSet& pset):
 	TPGSF1_= pset.getParameter<vector<double> >("TPGSF1");//calibration tables
 	TPGSFp_= pset.getParameter<vector<double> >("TPGSFp");//calibration tables
 
-	regionLSB_ = pset.getParameter<double>("regionLSB");//currently unused
-	egLSB_ = pset.getParameter<double>("egammaLSB");
+	LSB = pset.getParameter<double>("regionLSB");//currently unused
 
-	egammaSeed = pset.getParameter<int>("egammaSeed");
 	ECALOn = pset.getParameter<bool>("ECALOn"); //Calibrate  *if(ECALOn) maxTPGPt=maxTPGEPt)*
 	v_off = pset.getParameter<bool>("v_off"); //Calibrate
 	v1 = pset.getParameter<bool>("v1"); //Calibrate
@@ -391,8 +365,8 @@ void TauRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 		//fill corrected tpgs here
 		//eCorrTowerETCode
 		//CORRECTIONS
-		int etbin;
-		double alpha;
+		int etbin=0;
+		double alpha=1.0;
 		if(et<10){etbin=0;}
 		else if(et<15){etbin=1;}
 		else if(et<20){etbin=2;}
@@ -402,12 +376,10 @@ void TauRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 		else if(et<40){etbin=6;}
 		else if(et<45){etbin=7;}
 		else {etbin=8;}
-		if(v_off){alpha =1;} //voff
-		else {
+		if((!v_off)&&v1) {
 		     if ( ieta>27) {alpha = TPGSF1_[etbin*28+(ieta-28)];} //map 28-55 to 0-27
 		     else if ( ieta<28) {alpha = TPGSF1_[etbin*28+(ieta-27)];} //map 0-27 to 0-27 (flip order)
                 } //v1
-		//else {alpha = TPGSF1_[etbin*56+ieta];} //old table value
 		//std::cout<<"alpha: "<<alpha<<std::endl;
 		//std::cout<<"E: "<<et<<std::endl;
 		//std::cout<<"ECorr: "<<alpha*et<<std::endl;
@@ -437,8 +409,8 @@ void TauRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 			hTowerETCode[hniphi][hnieta] = energy;
 			//fill corrected tpgs here
 			//hCorrTowerETCode
-			int hetbin;
-			double alpha_h; //v_off, v1 
+			int hetbin=0;
+			double alpha_h=1.0; //v_off, v1 
 			if(energy<10){hetbin=0;}
 			else if(energy<15){hetbin=1;}
 			else if(energy<20){hetbin=2;}
@@ -448,7 +420,6 @@ void TauRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 			else if(energy<40){hetbin=6;}
 			else if(energy<45){hetbin=7;}
 			else {hetbin=8;}
-			if (v_off||v1){alpha_h =1.0;}
 			if (v3) {//required to check HCAL performance 
 				if ( hnieta>27) {alpha_h = TPGSFp_[hetbin*28+(ieta-28)];} //1-32 is mapped 28-55 cutting off HF
 				else if (hnieta<28) {alpha_h = TPGSFp_[hetbin*28+(ieta-27)];} //-32--1 is flipped, and mapped 0-27 cutting off HF

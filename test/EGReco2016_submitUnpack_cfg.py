@@ -48,7 +48,7 @@ process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_condD
 from Configuration.AlCa.GlobalTag import GlobalTag
 
 #process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:startup', '')
-process.GlobalTag.globaltag = '80X_dataRun2_Prompt_v8'
+process.GlobalTag.globaltag = '80X_dataRun2_Prompt_v9'
 
 # Load the correct global tag, based on the release
 # UNCOMMENT THIS LINE TO RUN ON SETTINGS FROM THE DATABASE
@@ -74,7 +74,8 @@ process.source = cms.Source(
 
 process.TFileService = cms.Service(
     "TFileService",
-    fileName = cms.string(options.outputFile)
+    fileName = cms.string(options.outputFile),
+    firstRun = cms.untracked.uint32(275125)
 )
 
 import FWCore.PythonUtilities.LumiList as LumiList

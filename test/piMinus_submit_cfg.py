@@ -64,12 +64,5 @@ process.tree = cms.EDAnalyzer("PionCalibrations",
 )
 
 
-#process.p = cms.Path(process.hcalDigis * process.ecalDigis * process.tree )
-#process.p = cms.Path(process.hcalDigis * process.simHcalTriggerPrimitiveDigis * process.ecalDigis * process.tree )
-#process.p = cms.Path(process.l1tCaloLayer1Digis * process.tree)
 process.p = cms.Path(process.hcalDigis * process.ecalDigis * process.simHcalTriggerPrimitiveDigis *process.tree)
-
-#process.p = cms.Path(process.simHcalTriggerPrimitiveDigis * process.l1tCaloLayer1Digis* process.tree)
-
-#process.p = cms.Path(process.l1tCaloLayer1Digis*process.simCaloStage2Layer1Digis*process.rctDigis * process.tree)
 #print process.dumpPython()

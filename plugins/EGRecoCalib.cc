@@ -56,7 +56,6 @@
 
 
 typedef std::vector<edm::InputTag> VInputTag;
-//typedef std::vector<unsigned int> PackedUIntCollection;
 using namespace std;
 using namespace edm;
 class EGRecoCalib : public edm::EDAnalyzer {
@@ -67,10 +66,6 @@ class EGRecoCalib : public edm::EDAnalyzer {
 		static const unsigned int N_TOWER_ETA;
 		void analyze(const edm::Event& evt, const edm::EventSetup& es);
 	private:
-		double egPhysicalEt(const L1CaloEmCand& cand) const {
-			return egLSB_*cand.rank();
-		}
-
 
 		TTree* tree;
 		edm::EDGetToken ecalSrc_;
@@ -78,10 +73,10 @@ class EGRecoCalib : public edm::EDAnalyzer {
 
 		edm::EDGetToken recoSrc_;
 
-                // ID decisions objects
-                edm::EDGetTokenT<edm::ValueMap<bool> > eleLooseIdMapToken_;
-                edm::EDGetTokenT<edm::ValueMap<bool> > eleMediumIdMapToken_;
-                edm::EDGetTokenT<edm::ValueMap<bool> > eleTightIdMapToken_;
+		// ID decisions objects
+		edm::EDGetTokenT<edm::ValueMap<bool> > eleLooseIdMapToken_;
+		edm::EDGetTokenT<edm::ValueMap<bool> > eleMediumIdMapToken_;
+		edm::EDGetTokenT<edm::ValueMap<bool> > eleTightIdMapToken_;
 
 		//initialize run info
 		unsigned int run_;
@@ -130,9 +125,7 @@ class EGRecoCalib : public edm::EDAnalyzer {
 
 		//TPG calibration vectors
 		vector<double> TPGSF1_;
-		vector<double> TPGSF2_;
 		vector<double> TPGSFp_;
-		vector<double> TPGSFp1_;
 
 
 		//calibrated TPGcollections
@@ -142,9 +135,7 @@ class EGRecoCalib : public edm::EDAnalyzer {
 
 
 		//handles
-		Handle<L1CaloRegionCollection> newRegions;
-		Handle<L1CaloEmCollection> newEMCands;
-		Handle<reco::VertexCollection> vertices;
+		Handle<reco::VertexCollection> vertices; //TODO ADD BACK IN
 		Handle<EcalTrigPrimDigiCollection> ecal;
 		Handle<HcalTrigPrimDigiCollection> hcal;
 
@@ -152,16 +143,9 @@ class EGRecoCalib : public edm::EDAnalyzer {
 		vector<double> sinPhi;
 		vector<double> cosPhi;
 
-		int egammaSeed;
-		bool ECALOn;
 		bool v_off;
 		bool v1;
-		bool v2;
 		bool v3;
-		bool v4;
-
-		double egLSB_;
-		double regionLSB_;
 
 		double LSB = 0.5; //used
 
@@ -182,7 +166,7 @@ EGRecoCalib::~EGRecoCalib() {
 
 
 unsigned int const EGRecoCalib::N_TOWER_PHI = 72;
-unsigned int const EGRecoCalib::N_TOWER_ETA = 56;
+unsigned int const EGRecoCalib::N_TOWER_ETA = 56; //only look at barrel and endcap
 
 
 namespace {
@@ -202,11 +186,11 @@ namespace {
 
 
 EGRecoCalib::EGRecoCalib(const edm::ParameterSet& pset):
-        eleLooseIdMapToken_(consumes<edm::ValueMap<bool> >(pset.getParameter<edm::InputTag>("eleLooseIdMap"))),
-        eleMediumIdMapToken_(consumes<edm::ValueMap<bool> >(pset.getParameter<edm::InputTag>("eleMediumIdMap"))),
-        eleTightIdMapToken_(consumes<edm::ValueMap<bool> >(pset.getParameter<edm::InputTag>("eleTightIdMap"))),
-        ecalSrc_(consumes<EcalTrigPrimDigiCollection>(pset.getParameter<edm::InputTag>("ecalSrc"))),
-        hcalSrc_(consumes<HcalTrigPrimDigiCollection>(pset.getParameter<edm::InputTag>("hcalSrc"))),
+	ecalSrc_(consumes<EcalTrigPrimDigiCollection>(pset.getParameter<edm::InputTag>("ecalSrc"))),
+	hcalSrc_(consumes<HcalTrigPrimDigiCollection>(pset.getParameter<edm::InputTag>("hcalSrc"))),
+	eleLooseIdMapToken_(consumes<edm::ValueMap<bool> >(pset.getParameter<edm::InputTag>("eleLooseIdMap"))),
+	eleMediumIdMapToken_(consumes<edm::ValueMap<bool> >(pset.getParameter<edm::InputTag>("eleMediumIdMap"))),
+	eleTightIdMapToken_(consumes<edm::ValueMap<bool> >(pset.getParameter<edm::InputTag>("eleTightIdMap"))),
 	eTowerETCode(N_TOWER_PHI, vector<unsigned int>(N_TOWER_ETA)),
 	eCorrTowerETCode(N_TOWER_PHI, vector<unsigned int>(N_TOWER_ETA)),
 	hTowerETCode(N_TOWER_PHI, vector<unsigned int>(N_TOWER_ETA)),
@@ -248,31 +232,23 @@ EGRecoCalib::EGRecoCalib(const edm::ParameterSet& pset):
 
 
 	// Input variables
-        recoSrc_    = mayConsume<edm::View<reco::GsfElectron> >(pset.getParameter<edm::InputTag>("recoSrc"));
+	recoSrc_    = mayConsume<edm::View<reco::GsfElectron> >(pset.getParameter<edm::InputTag>("recoSrc"));
 
 
 	TPGSF1_= pset.getParameter<vector<double> >("TPGSF1");//calibration tables
-	TPGSF2_= pset.getParameter<vector<double> >("TPGSF2");//calibration tables
 	TPGSFp_= pset.getParameter<vector<double> >("TPGSFp");//calibration tables
-	TPGSFp1_= pset.getParameter<vector<double> >("TPGSFp1");//calibration tables
 
-	regionLSB_ = pset.getParameter<double>("regionLSB");//currently unused
-	egLSB_ = pset.getParameter<double>("egammaLSB");
+	LSB = pset.getParameter<double>("regionLSB");//currently unused
 
-	egammaSeed = pset.getParameter<int>("egammaSeed");
-	ECALOn = pset.getParameter<bool>("ECALOn"); //Calibrate  *if(ECALOn) maxTPGPt=maxTPGEPt)*
 	v_off = pset.getParameter<bool>("v_off"); //Calibrate
 	v1 = pset.getParameter<bool>("v1"); //Calibrate
-	v2 = pset.getParameter<bool>("v2"); //Calibrate
 	v3 = pset.getParameter<bool>("v3"); //Calibrate
-	v4 = pset.getParameter<bool>("v4"); //Calibrate
 }
 
 
 void EGRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 	// Setup meta info
 	//std::cout<<"Analyze loop"<<std::endl;
-	//
 	run_ = evt.id().run();
 	lumi_ = evt.id().luminosityBlock();
 	event_ = evt.id().event();
@@ -281,14 +257,14 @@ void EGRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 
 	//get reco eg pt
 	edm::Handle<edm::View<reco::GsfElectron> > objects;
-        evt.getByToken(recoSrc_,objects);
+	evt.getByToken(recoSrc_,objects);
 
-        edm::Handle<edm::ValueMap<bool> > loose_id_decisions;
-        edm::Handle<edm::ValueMap<bool> > medium_id_decisions;
-        edm::Handle<edm::ValueMap<bool> > tight_id_decisions;
-        evt.getByToken(eleLooseIdMapToken_ ,loose_id_decisions);
-        evt.getByToken(eleMediumIdMapToken_,medium_id_decisions);
-        evt.getByToken(eleTightIdMapToken_,tight_id_decisions);
+	edm::Handle<edm::ValueMap<bool> > loose_id_decisions;
+	edm::Handle<edm::ValueMap<bool> > medium_id_decisions;
+	edm::Handle<edm::ValueMap<bool> > tight_id_decisions;
+	evt.getByToken(eleLooseIdMapToken_ ,loose_id_decisions);
+	evt.getByToken(eleMediumIdMapToken_,medium_id_decisions);
+	evt.getByToken(eleTightIdMapToken_,tight_id_decisions);
 
 
 	pts_->clear();
@@ -361,11 +337,10 @@ void EGRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 		//	<<"ieta:"<<ieta<<" cal_ieta:"<< cal_ieta<<" iphi:"<<iphi<<endl;
 		double et= (*ecal)[i].compressedEt()*LSB;
 		eTowerETCode[iphi][ieta] = et;
-		//fill corrected tpgs here
-		//eCorrTowerETCode
+		//fill corrected tpgs here	//eCorrTowerETCode
 		//CORRECTIONS
-		int etbin;
-		double alpha;
+		int etbin=0;
+		double alpha=1.0;
 		if(et<10){etbin=0;}
 		else if(et<15){etbin=1;}
 		else if(et<20){etbin=2;}
@@ -375,9 +350,10 @@ void EGRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 		else if(et<40){etbin=6;}
 		else if(et<45){etbin=7;}
 		else {etbin=8;}
-		if(v_off){alpha =1;} //voff
-		if(v1) {alpha = TPGSF1_[etbin*56+ieta];} //v1
-		else if(v2||v3||v4){ alpha = TPGSF1_[etbin*56+ieta]*TPGSF2_[ieta];}//v2 v3 v4
+		if((!v_off)&&v1) {
+		     if ( ieta>27) {alpha = TPGSF1_[etbin*28+(ieta-28)];} //map 28-55 to 0-27
+		     else if ( ieta<28) {alpha = TPGSF1_[etbin*28+(ieta-27)];} //map 0-27 to 0-27 (flip order)
+                } //v1
 		eCorrTowerETCode[iphi][ieta] = alpha*et;
 		//std::cout<<"Ecal sf: "<<alpha<<std::endl;
 	}//end ECAL TPGS
@@ -396,21 +372,17 @@ void EGRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 		HcalTrigTowerDetId id = digi.id();
 		float tp_et_ = decoder->hcaletValue(id, digi.t0());
 		if (tp_et_ < 0) continue;
-	        int ieta = id.ieta();
-	        int iphi = id.iphi();
+		int ieta = id.ieta();
+		int iphi = id.iphi();
 		int hniphi = iphi-1;
-		int hnieta = TPGEtaRange(ieta);
-		short absieta = std::abs(ieta);
-
+		int hnieta = TPGEtaRange(ieta);//0 to 55
 		if (ieta >= -1000 && ieta <= 1000 &&
 				iphi >= -1000 && ieta <= 1000) {
 			double energy = tp_et_; 
-
 			hTowerETCode[hniphi][hnieta] = energy;
-			//fill corrected tpgs here
-			//hCorrTowerETCode
+			//fill corrected tpgs here: for vector hCorrTowerETCode
 			int hetbin;
-			double alpha_h; //v_off, v1 v2
+			double alpha_h=1.0; //v_off, v1
 			if(energy<10){hetbin=0;}
 			else if(energy<15){hetbin=1;}
 			else if(energy<20){hetbin=2;}
@@ -420,11 +392,11 @@ void EGRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 			else if(energy<40){hetbin=6;}
 			else if(energy<45){hetbin=7;}
 			else {hetbin=8;}
-			if (v_off||v1||v2){alpha_h =1.0;}
-			if (v3) {alpha_h = TPGSFp_[hnieta];}
-			else if (v4){ double alpha_h2 = TPGSFp1_[hnieta];}//last correction
+			if ((!v_off)&&v3) {//required to check HCAL performance 
+				if ( hnieta>27) {alpha_h = TPGSFp_[hetbin*28+(ieta-28)];} //1-32 is mapped 28-55 cutting off HF
+				else if (hnieta<28) {alpha_h = TPGSFp_[hetbin*28+(ieta-27)];} //-32--1 is flipped, and mapped 0-27 cutting off HF
+			}
 			hCorrTowerETCode[hniphi][hnieta] = alpha_h*energy;
-
 		}//end if
 	}//end HCAL TPGs
 
@@ -437,39 +409,35 @@ void EGRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 		double closestDR=10e6;
 		double closestDRET=10e6;
 		int match=-1;
-		if (ECALOn){
-			for (size_t j = 0; j < ecal->size(); ++j) {
-				int cal_ieta = (*ecal)[j].id().ieta();
-				int cal_iphi = (*ecal)[j].id().iphi();
-				int iphi = cal_iphi-1;
-				int ieta = TPGEtaRange(cal_ieta);
-				float phi = convertTPGPhi(iphi); //returns phi
-				float eta = convertTPGEta(ieta);
-				// TPG iPhi starts at 1 and goes to 72.  Let's index starting at zero.
-				// TPG ieta ideal goes from 0-55.
-				//	<<"ieta:"<<ieta<<" cal_ieta:"<< cal_ieta<<" iphi:"<<iphi<<endl;
-				double et= (*ecal)[j].compressedEt()*LSB;
-				//fill corrected tpgs here
-				//eCorrTowerETCode[][]=et*alpha
+		for (size_t j = 0; j < ecal->size(); ++j) {
+			int cal_ieta = (*ecal)[j].id().ieta();
+			int cal_iphi = (*ecal)[j].id().iphi();
+			int iphi = cal_iphi-1;
+			int ieta = TPGEtaRange(cal_ieta);
+			float phi = convertTPGPhi(iphi); //returns phi
+			float eta = convertTPGEta(ieta);
+			// TPG iPhi starts at 1 and goes to 72.  Let's index starting at zero.
+			// TPG ieta ideal goes from 0-55.
+			//	<<"ieta:"<<ieta<<" cal_ieta:"<< cal_ieta<<" iphi:"<<iphi<<endl;
+			double et= (*ecal)[j].compressedEt()*LSB;
 
-				double deltaEta=(etas_->at(i) - eta);
-				double deltaPhi=reco::deltaPhi(phis_->at(i),phi);
-				double dR=sqrt( deltaEta*deltaEta + deltaPhi*deltaPhi);
+			double deltaEta=(etas_->at(i) - eta);
+			double deltaPhi=reco::deltaPhi(phis_->at(i),phi);
+			double dR=sqrt( deltaEta*deltaEta + deltaPhi*deltaPhi);
 
-				if (dR<.2 && dR<closestDR && pts_->at(i)<127 && fabs(pts_->at(i)-et) < closestDRET) { //require dR<.5, closestDr that
-					closestDRET=abs(pts_->at(i)-et);
-					closestDR= dR;
-					match=j;
-					//maxETPGPt = et;
-					//maxETPGPt_eta = ieta;
-					//maxETPGPt_phi = iphi;
-					maxTPGdR = closestDR;
-					maxTPGPt = et;
-					maxTPGPt_eta = ieta;
-					maxTPGPt_phi = iphi;
-				}//end if
-			}//end ecal size
-		}//end ecal on
+			if (dR<.2 && dR<closestDR && pts_->at(i)<127 && fabs(pts_->at(i)-et) < closestDRET) { //require dR<.5, closestDr that
+				closestDRET=abs(pts_->at(i)-et);
+				closestDR= dR;
+				match=j;
+				//maxETPGPt = et;
+				//maxETPGPt_eta = ieta;
+				//maxETPGPt_phi = iphi;
+				maxTPGdR = closestDR;
+				maxTPGPt = et;
+				maxTPGPt_eta = ieta;
+				maxTPGPt_phi = iphi;
+			}//end if
+		}//end ecal size
 		if (match==-1){
 			maxTPGdR_.push_back(999);
 			maxTPGPt_.push_back(0);
@@ -506,77 +474,76 @@ void EGRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 			int cTPGh5x5=0;
 			int cTPGe5x5=0;
 			int cTPG5x5=0;
-			for (int j = -1; j < 2; ++j) {//}//phi
-				for (int k = -1; k < 2; ++k) {//} //eta
+			for (int j = -1; j < 2; ++j) {//phi
+				for (int k = -1; k < 2; ++k) { //eta
 					//std::cout<<"Inside j k for "<<std::endl;
 					int tpgsquarephi= TPG5x5_tpgphi_.at(i)+j;
-			//std::cout<<"tpgsquarephi "<<tpgsquarephi<< std::endl;
-			int tpgsquareeta= TPG5x5_tpgeta_.at(i)+k;
-			//std::cout<<"tpgsquareeta "<<tpgsquareeta<< std::endl;
-			if (tpgsquarephi==-1) {tpgsquarephi=71;}
-			if (tpgsquarephi==-2) {tpgsquarephi=70;}
-			if (tpgsquarephi==-3) {tpgsquarephi=69;}
-			if (tpgsquarephi==-4) {tpgsquarephi=68;}
-			if (tpgsquarephi==-5) {tpgsquarephi=67;}
-			if (tpgsquarephi==72) {tpgsquarephi=0;}
-			if (tpgsquarephi==73) {tpgsquarephi=1;}
-			if (tpgsquarephi==74) {tpgsquarephi=2;}
-			if (tpgsquarephi==75) {tpgsquarephi=3;}
-			if (tpgsquarephi==76) {tpgsquarephi=4;}
-			if (tpgsquareeta>55 || tpgsquareeta<0) {continue;}//No Eta values beyond
+					//std::cout<<"tpgsquarephi "<<tpgsquarephi<< std::endl;
+					int tpgsquareeta= TPG5x5_tpgeta_.at(i)+k;
+					//std::cout<<"tpgsquareeta "<<tpgsquareeta<< std::endl;
+					if (tpgsquarephi==-1) {tpgsquarephi=71;}
+					if (tpgsquarephi==-2) {tpgsquarephi=70;}
+					if (tpgsquarephi==-3) {tpgsquarephi=69;}
+					if (tpgsquarephi==-4) {tpgsquarephi=68;}
+					if (tpgsquarephi==-5) {tpgsquarephi=67;}
+					if (tpgsquarephi==72) {tpgsquarephi=0;}
+					if (tpgsquarephi==73) {tpgsquarephi=1;}
+					if (tpgsquarephi==74) {tpgsquarephi=2;}
+					if (tpgsquarephi==75) {tpgsquarephi=3;}
+					if (tpgsquarephi==76) {tpgsquarephi=4;}
+					if (tpgsquareeta>55 || tpgsquareeta<0) {continue;}//No Eta values beyond
 
-			TPGh5x5+=hTowerETCode[tpgsquarephi][tpgsquareeta];
-			TPGe5x5+=eTowerETCode[tpgsquarephi][tpgsquareeta];
-			TPG5x5+=hTowerETCode[tpgsquarephi][tpgsquareeta];
-			TPG5x5+=eTowerETCode[tpgsquarephi][tpgsquareeta];
-			cTPGh5x5+=hCorrTowerETCode[tpgsquarephi][tpgsquareeta];
-			cTPGe5x5+=eCorrTowerETCode[tpgsquarephi][tpgsquareeta];
-			cTPG5x5+=hCorrTowerETCode[tpgsquarephi][tpgsquareeta];
-			cTPG5x5+=eCorrTowerETCode[tpgsquarephi][tpgsquareeta];
+					TPGh5x5+=hTowerETCode[tpgsquarephi][tpgsquareeta];
+					TPGe5x5+=eTowerETCode[tpgsquarephi][tpgsquareeta];
+					TPG5x5+=hTowerETCode[tpgsquarephi][tpgsquareeta];
+					TPG5x5+=eTowerETCode[tpgsquarephi][tpgsquareeta];
+					cTPGh5x5+=hCorrTowerETCode[tpgsquarephi][tpgsquareeta];
+					cTPGe5x5+=eCorrTowerETCode[tpgsquarephi][tpgsquareeta];
+					cTPG5x5+=hCorrTowerETCode[tpgsquarephi][tpgsquareeta];
+					cTPG5x5+=eCorrTowerETCode[tpgsquarephi][tpgsquareeta];
+				}
+			}
+			TPGh5x5_.push_back(TPGh5x5);
+			TPGe5x5_.push_back(TPGe5x5);
+			TPG5x5_.push_back(TPG5x5);
+			cTPGh5x5_.push_back(cTPGh5x5);
+			cTPGe5x5_.push_back(cTPGe5x5);
+			cTPG5x5_.push_back(cTPG5x5);
+		}//end if max tpg
+		else { 
+			TPGh5x5_.push_back(0);
+			TPGe5x5_.push_back(0);
+			TPG5x5_.push_back(0);
+			cTPG5x5_.push_back(0);
+			cTPGe5x5_.push_back(0);
+			cTPGh5x5_.push_back(0);
+			TPG5x5_gcteta_.push_back(0);
+			TPG5x5_tpgeta_.push_back(0);
+			TPG5x5_tpgphi_.push_back(0);
+
 		}
+	}//end for
+
+
+	//Fill Pt bin
+	for(size_t i = 0; i < maxTPGPt_.size(); ++i){
+		if (maxTPGPt_.at(i)>0){
+			TPGVeto_.push_back(maxTPGPt_.at(i)/TPG5x5_.at(i));
+		}
+		else {TPGVeto_.push_back(-1);}
+		if(maxTPGPt_.at(i)<10){ptbin_.push_back(0);}
+		else if(maxTPGPt_.at(i)<15){ptbin_.push_back(1);}
+		else if(maxTPGPt_.at(i)<20){ptbin_.push_back(2);}
+		else if(maxTPGPt_.at(i)<25){ptbin_.push_back(3);}
+		else if(maxTPGPt_.at(i)<30){ptbin_.push_back(4);}
+		else if(maxTPGPt_.at(i)<35){ptbin_.push_back(5);}
+		else if(maxTPGPt_.at(i)<40){ptbin_.push_back(6);}
+		else if(maxTPGPt_.at(i)<45){ptbin_.push_back(7);}
+		else {ptbin_.push_back(8);}
 	}
-	TPGh5x5_.push_back(TPGh5x5);
-	TPGe5x5_.push_back(TPGe5x5);
-	TPG5x5_.push_back(TPG5x5);
-	cTPGh5x5_.push_back(cTPGh5x5);
-	cTPGe5x5_.push_back(cTPGe5x5);
-	cTPG5x5_.push_back(cTPG5x5);
-}//end if max tpg
-else { 
-	TPGh5x5_.push_back(0);
-	TPGe5x5_.push_back(0);
-	TPG5x5_.push_back(0);
-	cTPG5x5_.push_back(0);
-	cTPGe5x5_.push_back(0);
-	cTPGh5x5_.push_back(0);
-	TPG5x5_gcteta_.push_back(0);
-	TPG5x5_tpgeta_.push_back(0);
-	TPG5x5_tpgphi_.push_back(0);
 
-}
-}//end for
-
-
-//Fill Pt bin
-for(size_t i = 0; i < maxTPGPt_.size(); ++i){
-	if (maxTPGPt_.at(i)>0){
-		TPGVeto_.push_back(maxTPGPt_.at(i)/TPG5x5_.at(i));
-	}
-	else {TPGVeto_.push_back(-1);}
-	if(maxTPGPt_.at(i)<10){ptbin_.push_back(0);}
-	else if(maxTPGPt_.at(i)<15){ptbin_.push_back(1);}
-	else if(maxTPGPt_.at(i)<20){ptbin_.push_back(2);}
-	else if(maxTPGPt_.at(i)<25){ptbin_.push_back(3);}
-	else if(maxTPGPt_.at(i)<30){ptbin_.push_back(4);}
-	else if(maxTPGPt_.at(i)<35){ptbin_.push_back(5);}
-	else if(maxTPGPt_.at(i)<40){ptbin_.push_back(6);}
-	else if(maxTPGPt_.at(i)<45){ptbin_.push_back(7);}
-	else {ptbin_.push_back(8);}
-}
-
-//	std::cout<<"Fill Tree"<<std::endl;
-
-tree->Fill();
+	//	std::cout<<"Fill Tree"<<std::endl;
+	tree->Fill();
 }
 
 #include "FWCore/Framework/interface/MakerMacros.h"

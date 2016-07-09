@@ -11,7 +11,6 @@ options = VarParsing ('analysis')
 #options.inputFiles = '/store/data/Run2016B/SingleElectron/MINIAOD/PromptReco-v2/000/273/158/00000/1CCC1100-0E1A-E611-98C7-02163E014332.root'
 
 options.outputFile = "tpg_eg_verification.root"
-#options.outputFile = "tpg_hcal_verification.root"
 
 
 options.register(
@@ -121,18 +120,11 @@ process.tree = cms.EDAnalyzer(
     eleMediumIdMap = cms.InputTag("egmGsfElectronIDs:cutBasedElectronID-Spring15-25ns-V1-standalone-medium"),
     eleTightIdMap = cms.InputTag("egmGsfElectronIDs:cutBasedElectronID-Spring15-25ns-V1-standalone-tight"),
     TPGSF1 = TPG_SF_E_Full, #current settings
-    TPGSF2 = TPG_SF_E_Full, #current settings
     TPGSFp = TPG_SF_H_Current, #current settings
-    TPGSFp1 = TPG_SF_H_Current, #current settings
     regionLSB = cms.double(0.5),
-    egammaLSB = cms.double(1.0), # This has to correspond with the value from L1CaloEmThreshold
-    egammaSeed = cms.int32(2),	
-    ECALOn = cms.bool(True),	
     v_off = cms.bool(True),	
     v1 = cms.bool(False),	
-    v2 = cms.bool(False),	
-    v3 = cms.bool(False),	
-    v4 = cms.bool(False)
+    v3 = cms.bool(False)	
 )
 
 

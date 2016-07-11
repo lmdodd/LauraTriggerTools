@@ -4,6 +4,10 @@ import os
 from L1Trigger.LauraTriggerTools.TPG_cfi import *
 # Get command line options
 from FWCore.ParameterSet.VarParsing import VarParsing
+from Configuration.StandardSequences.Eras import eras
+import EventFilter.L1TXRawToDigi.util as util
+
+
 options = VarParsing ('analysis')
 # Set useful defaults
 options.inputFiles = '/store/data/Run2016B/Tau/MINIAOD/PromptReco-v2/000/275/001/00000/5E3E354F-4F34-E611-AD7E-02163E014660.root'
@@ -29,10 +33,10 @@ options.register(
 
 options.parseArguments()
 
-process = cms.Process("L1Digis")
+process = cms.Process("L1Digis",eras.Run2_2016)
 
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_condDBv2_cff')
-process.GlobalTag.globaltag = '80X_dataRun2_Prompt_v9'
+#process.GlobalTag.globaltag = '80X_dataRun2_Prompt_v9'
 process.load('Configuration.StandardSequences.Services_cff')
 process.load('SimGeneral.HepPDTESSource.pythiapdt_cfi')
 process.load('FWCore.MessageService.MessageLogger_cfi')
@@ -41,12 +45,16 @@ process.load('Configuration.Geometry.GeometryExtended2016Reco_cff')
 process.load('Configuration.StandardSequences.MagneticField_AutoFromDBCurrent_cff')
 process.load('Configuration.StandardSequences.RawToDigi_Data_cff')
 process.load('Configuration.StandardSequences.EndOfProcess_cff')
-process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_condDBv2_cff')
 
-
+from Configuration.AlCa.GlobalTag import GlobalTag
+process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:run2_data', '')
 # Load the correct global tag, based on the release
 # UNCOMMENT THIS LINE TO RUN ON SETTINGS FROM THE DATABASE
 # process.es_prefer_GlobalTag = cms.ESPrefer('PoolDBESSource', 'GlobalTag')
+process.load('L1Trigger.L1TCalorimeter.caloStage2Params_2016_v2_1_cfi')
+process.load('SimCalorimetry.HcalTrigPrimProducers.hcaltpdigi_cff')
+process.load('EventFilter.L1TXRawToDigi.caloLayer1Stage2Digis_cfi')
+
 
 
 process.maxEvents = cms.untracked.PSet(
@@ -115,9 +123,10 @@ process.tree = cms.EDAnalyzer(
 
 
 process.p1 = cms.Path(
-    process.ecalDigis*
-    process.hcalDigis*
-    process.scalersRawToDigi
+    process.l1tCaloLayer1Digis
+    #process.ecalDigis*
+    #process.hcalDigis*
+    #process.scalersRawToDigi
 )
 
 
@@ -130,3 +139,4 @@ process.MessageLogger.cerr.FwkReport.reportEvery = 100
 # Spit out filter efficiency at the end.
 process.options = cms.untracked.PSet(wantSummary = cms.untracked.bool(True))
 
+print process.dumpPython()

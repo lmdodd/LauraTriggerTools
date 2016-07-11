@@ -72,7 +72,7 @@ class TauRecoCalib : public edm::EDAnalyzer {
 
 
 		TTree* tree;
-		edm::EDGetTokenT<std::vector<LumiScalers>> scalerSrc_;
+		//edm::EDGetTokenT<std::vector<LumiScalers>> scalerSrc_;
 		edm::EDGetTokenT<std::vector<L1CaloRegion>> l1Digis_;
 		edm::EDGetTokenT<std::vector<reco::Vertex>> pvSrc_;
 		edm::EDGetTokenT<HcalTrigPrimDigiCollection> hcalSrc_;
@@ -96,12 +96,12 @@ class TauRecoCalib : public edm::EDAnalyzer {
 		vector<float>* phis_;
 
 		//TPG MAX information
-		vector<float> centralTPGPt_;
-		vector<float> centraleTPGPt_;
-		vector<float> centralhTPGPt_;
+		vector<double> centralTPGPt_;
+		vector<double> centraleTPGPt_;
+		vector<double> centralhTPGPt_;
 
 		//TPG information
-		vector<float> TPGVeto_; //This determines majority in central TPG
+		vector<double> TPGVeto_; //This determines majority in central TPG
 		vector<int> ptbin_; //This determines majority in central TPG
 
 		vector<double> TPG5x5_;
@@ -197,7 +197,7 @@ TauRecoCalib::TauRecoCalib(const edm::ParameterSet& pset):
 	tree->Branch("instlumi", &instLumi_, "instlumi/F");
 
 	//calibration vectors
-	tree->Branch("TPGVeto", "std::vector<float>", &TPGVeto_); //calibrate event or not
+	tree->Branch("TPGVeto", "std::vector<double>", &TPGVeto_); //calibrate event or not
 	tree->Branch("ptbin", "std::vector<int>", &ptbin_); //calibrate event or not
 
 
@@ -212,8 +212,8 @@ TauRecoCalib::TauRecoCalib(const edm::ParameterSet& pset):
 
 	tree->Branch("recoPt", "std::vector<float>", &pts_); //reco eg rct pt
 	tree->Branch("recoDMs", "std::vector<float>", &dms_); //reco eg rct pt
-	tree->Branch("recoGctEta", "std::vector<float>", &etas_);//reco eta
-	tree->Branch("recoGctPhi", "std::vector<float>", &phis_);//reco phi
+	tree->Branch("recoEta", "std::vector<float>", &etas_);//reco eta
+	tree->Branch("recoPhi", "std::vector<float>", &phis_);//reco phi
 
 	//cTPG5x5
 	tree->Branch("cTPG5x5", "std::vector<double>", &cTPG5x5_);
@@ -221,10 +221,12 @@ TauRecoCalib::TauRecoCalib(const edm::ParameterSet& pset):
 	tree->Branch("cTPGe5x5","std::vector<double>", &cTPGe5x5_);
 
 
-	scalerSrc_ = consumes<std::vector<LumiScalers>>(InputTag("scalersRawToDigi"));
+	//scalerSrc_ = consumes<std::vector<LumiScalers>>(InputTag("scalersRawToDigi"));
 	pvSrc_ = consumes<std::vector<reco::Vertex>>(InputTag("offlineSlimmedPrimaryVertices"));
-	ecalSrc_ = consumes<edm::SortedCollection<EcalTriggerPrimitiveDigi,edm::StrictWeakOrdering<EcalTriggerPrimitiveDigi> >>(InputTag("ecalDigis:EcalTriggerPrimitives"));
-	hcalSrc_ = consumes<edm::SortedCollection<HcalTriggerPrimitiveDigi,edm::StrictWeakOrdering<HcalTriggerPrimitiveDigi> >>( InputTag("hcalDigis"));
+	ecalSrc_ = consumes<edm::SortedCollection<EcalTriggerPrimitiveDigi,edm::StrictWeakOrdering<EcalTriggerPrimitiveDigi> >>(InputTag("l1tCaloLayer1Digis"));
+	hcalSrc_ = consumes<edm::SortedCollection<HcalTriggerPrimitiveDigi,edm::StrictWeakOrdering<HcalTriggerPrimitiveDigi> >>( InputTag("l1tCaloLayer1Digis"));
+	//ecalSrc_ = consumes<edm::SortedCollection<EcalTriggerPrimitiveDigi,edm::StrictWeakOrdering<EcalTriggerPrimitiveDigi> >>(InputTag("ecalDigis:EcalTriggerPrimitives"));
+	//hcalSrc_ = consumes<edm::SortedCollection<HcalTriggerPrimitiveDigi,edm::StrictWeakOrdering<HcalTriggerPrimitiveDigi> >>( InputTag("hcalDigis"));
 
 	TPGSF1_= pset.getParameter<vector<double> >("TPGSF1");//calibration tables
 	TPGSFp_= pset.getParameter<vector<double> >("TPGSFp");//calibration tables
@@ -245,7 +247,7 @@ void TauRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 	run_ = evt.id().run();
 	lumi_ = evt.id().luminosityBlock();
 	event_ = evt.id().event();
-	evt.getByToken(scalerSrc_, lumiScalers);
+	//evt.getByToken(scalerSrc_, lumiScalers);
 	evt.getByToken(pvSrc_, vertices);
 	evt.getByToken(ecalSrc_, ecal);
 	evt.getByToken(hcalSrc_, hcal);
@@ -256,8 +258,8 @@ void TauRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 	npvs_ = 0;
 	npvs_ = vertices->size();
 
-	if (lumiScalers->size())
-		instLumi_ = lumiScalers->begin()->instantLumi();
+	//if (lumiScalers->size())
+	//	instLumi_ = lumiScalers->begin()->instantLumi();
 
 
 
@@ -276,6 +278,8 @@ void TauRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 	//std::cout<<"Reset maxTPGS"<<std::endl;
 	// TPG TESTING
 	centralTPGPt_.clear();
+	centraleTPGPt_.clear();
+	centralhTPGPt_.clear();
 
 	//std::cout<<"Reset TPG5x5s"<<std::endl;
 	TPG5x5_.clear();
@@ -292,7 +296,7 @@ void TauRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 
 
 	//std::cout << "TPGS" << std::endl;
-	std::cout << "ECAL TPGS" << std::endl;
+	//std::cout << "ECAL TPGS" << std::endl;
 	//fill ET vector
 	for (size_t i = 0; i < ecal->size(); ++i) {
 		int cal_ieta = (*ecal)[i].id().ieta();
@@ -320,18 +324,23 @@ void TauRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 		else if(et<45){etbin=7;}
 		else {etbin=8;}
 		if((!v_off)&&v1) {
-			if ( ieta>27) {alpha = TPGSF1_[etbin*28+(ieta-28)]; std::cout<<"bin used in LUT"<<etbin*28+(ieta-28)<<std::endl;} //map 28-55 to 0-27
-			else if ( ieta<28) {alpha = TPGSF1_[etbin*28+abs(ieta-27)]; std::cout<<"bin used in LUT"<<etbin*28+abs(ieta-27)<<std::endl;} //map 0-27 to 0-27 (flip order)
+			if ( ieta>27) {
+				alpha = TPGSF1_[etbin*28+(ieta-28)]; 
+				//std::cout<<"bin used in LUT"<<etbin*28+(ieta-28)<<std::endl;
+			} //map 28-55 to 0-27
+			else if ( ieta<28) {alpha = TPGSF1_[etbin*28+abs(ieta-27)]; //map 0-27 to 0-27 (flip order) 
+				//std::cout<<"bin used in LUT"<<etbin*28+abs(ieta-27)<<std::endl; //map 0-27 to 0-27 (flip order)
+			}
 		} //v1
 
 		if( et>5) {
-			std::cout<<"====NEW DIGI ===="<<std::endl;
-			std::cout<<"etbin: "<<etbin<<std::endl;
-			std::cout<<"ieta: "<<ieta<<std::endl;
-			std::cout<<"iphi: "<<iphi<<std::endl;
-			std::cout<<"alpha: "<<alpha<<std::endl;
-			std::cout<<"et: "<<et<<std::endl;
-			std::cout<<"etCorr: "<<alpha*et<<std::endl;
+			//std::cout<<"====NEW DIGI ===="<<std::endl;
+			//std::cout<<"etbin: "<<etbin<<std::endl;
+			//std::cout<<"ieta: "<<ieta<<std::endl;
+			//std::cout<<"iphi: "<<iphi<<std::endl;
+			//std::cout<<"alpha: "<<alpha<<std::endl;
+			//std::cout<<"et: "<<et<<std::endl;
+			//std::cout<<"etCorr: "<<alpha*et<<std::endl;
 		}
 		eCorrTowerETCode[iphi][ieta] = alpha*et;
 	}//end ECAL TPGS
@@ -354,7 +363,7 @@ void TauRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 		double tp_et_ = decoder->hcaletValue(id, digi.t0());
 		int tp_ieta_ = id.ieta();
 		int tp_iphi_ = id.iphi();
-		std::cout<<" HCAL ieta: "<<tp_ieta_ <<std::endl;
+		//std::cout<<" HCAL ieta: "<<tp_ieta_ <<std::endl;
 		if (abs(tp_ieta_)>28) continue; //ignore HF for now in HCAL vecotr 
 		// TPG iEta starts at 0 and goes to 55 for ECAL; FIXME in helpers? Will be different for hcal 
 		// TPG iPhi starts at 1 and goes to 72.  Let's index starting at zero.
@@ -392,7 +401,7 @@ void TauRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 			if (ptbin<0) ptbin=0; 
 			else if (ptbin>8) ptbin=8;
 
- 	
+
 			//cout<<"TauParticle Pt: "<< pts_ <<" Eta: "<<tau_eta_<<" Phi: "<<tau_phi_<<" iEta: "<<tau_ieta_<<" iPhi: "<<tau_iphi_ <<endl;
 			//iETA NEGATIVE
 			ptbin_.push_back(ptbin);
@@ -405,12 +414,12 @@ void TauRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 			double chTPG=0;
 			double ceCorrTPG=0;
 
+			chTPG +=hTowerETCode[tau_iphi_][tau_ieta_];
+			ceCorrTPG +=eCorrTowerETCode[tau_iphi_][tau_ieta_];
 			for (int j = -2; j < 3; ++j) {//eta
 				for (int k = -2; k < 3; ++k) { //phi
 					int tpgsquarephi= tau_iphi_+k;
 					int tpgsquareeta= tau_ieta_+j;	
-					chTPG +=hTowerETCode[tau_iphi_][tau_ieta_];
-					ceCorrTPG +=eCorrTowerETCode[tau_iphi_][tau_ieta_];
 
 					if (tpgsquarephi==-1) {tpgsquarephi=71;}
 					if (tpgsquarephi==-2) {tpgsquarephi=70;}
@@ -443,9 +452,9 @@ void TauRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 			cTPGh5x5_.push_back(cTPGh5x5);
 			cTPGe5x5_.push_back(cTPGe5x5);
 			TPGVeto_.push_back(TPGh5x5/cTPGe5x5);
-		        centralTPGPt_.push_back(ceCorrTPG+chTPG);
-		        centraleTPGPt_.push_back(ceCorrTPG);
-		        centralhTPGPt_.push_back(chTPG);
+			centralTPGPt_.push_back(ceCorrTPG+chTPG);
+			centraleTPGPt_.push_back(ceCorrTPG);
+			centralhTPGPt_.push_back(chTPG);
 
 		}//end good taus
 	}//end tau loop

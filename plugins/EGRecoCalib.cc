@@ -376,8 +376,8 @@ void EGRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 		int iphi = id.iphi();
 		int hniphi = iphi-1;
 		int hnieta = TPGEtaRange(ieta);//0 to 55
-		if (ieta >= -1000 && ieta <= 1000 &&
-				iphi >= -1000 && ieta <= 1000) {
+		if (ieta >= 56 && ieta <= -1 &&
+				iphi >= 72 && ieta <= -1) {
 			double energy = tp_et_; 
 			hTowerETCode[hniphi][hnieta] = energy;
 			//fill corrected tpgs here: for vector hCorrTowerETCode

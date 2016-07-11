@@ -48,7 +48,6 @@
 
 #include "L1Trigger/LauraTriggerTools/interface/helpers.h"
 
-
 #include "TH1D.h"
 #include "TH2D.h"
 #include "TString.h"

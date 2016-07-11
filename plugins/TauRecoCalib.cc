@@ -13,6 +13,7 @@
  */
 #include "L1Trigger/LauraTriggerTools/interface/ExpressionNtuple.h"
 #include "L1Trigger/LauraTriggerTools/interface/helpers.h"
+#include <unordered_map>
 #include <memory>
 #include <math.h>
 #include <vector>
@@ -27,7 +28,6 @@
 #include "DataFormats/VertexReco/interface/VertexFwd.h"
 #include "DataFormats/Candidate/interface/Candidate.h"
 #include "DataFormats/Math/interface/deltaPhi.h"
-#include "DataFormats/EgammaCandidates/interface/GsfElectron.h"
 #include "DataFormats/HepMCCandidate/interface/GenParticle.h"
 #include "DataFormats/Common/interface/DetSet.h"
 #include "DataFormats/L1CaloTrigger/interface/L1CaloCollections.h"
@@ -41,17 +41,26 @@
 #include "CommonTools/UtilAlgos/interface/TFileService.h"
 #include "DataFormats/EcalDigi/interface/EcalDigiCollections.h"
 #include "DataFormats/HcalDigi/interface/HcalDigiCollections.h"
-#include "CondFormats/L1TObjects/interface/L1CaloHcalScale.h"
-#include "CondFormats/DataRecord/interface/L1CaloHcalScaleRcd.h"
 #include "FWCore/Framework/interface/ESHandle.h"
 #include "DataFormats/PatCandidates/interface/Tau.h"
+
+#include "CalibFormats/CaloTPG/interface/CaloTPGTranscoder.h"
+#include "CalibFormats/CaloTPG/interface/CaloTPGRecord.h"
+#include "CalibFormats/HcalObjects/interface/HcalDbRecord.h"
+#include "CalibFormats/HcalObjects/interface/HcalDbService.h"
+
+#include "Geometry/CaloGeometry/interface/CaloGeometry.h"
+#include "Geometry/HcalTowerAlgo/interface/HcalGeometry.h"
+#include "Geometry/HcalTowerAlgo/interface/HcalTrigTowerGeometry.h"
+#include "Geometry/Records/interface/CaloGeometryRecord.h"
+
 
 
 typedef std::vector<edm::InputTag> VInputTag;
 
-//typedef std::vector<unsigned int> PackedUIntCollection;
 using namespace std;
 using namespace edm;
+
 class TauRecoCalib : public edm::EDAnalyzer {
 	public:
 		explicit TauRecoCalib(const edm::ParameterSet& pset);
@@ -66,10 +75,10 @@ class TauRecoCalib : public edm::EDAnalyzer {
 		edm::EDGetTokenT<std::vector<LumiScalers>> scalerSrc_;
 		edm::EDGetTokenT<std::vector<L1CaloRegion>> l1Digis_;
 		edm::EDGetTokenT<std::vector<reco::Vertex>> pvSrc_;
-		edm::EDGetTokenT<edm::SortedCollection<EcalTriggerPrimitiveDigi,edm::StrictWeakOrdering<EcalTriggerPrimitiveDigi> >> ecalSrc_;
-		edm::EDGetTokenT<edm::SortedCollection<HcalTriggerPrimitiveDigi,edm::StrictWeakOrdering<HcalTriggerPrimitiveDigi> >> hcalSrc_;
-
-                edm::EDGetTokenT<pat::TauCollection> tauToken_;
+		edm::EDGetTokenT<HcalTrigPrimDigiCollection> hcalSrc_;
+		edm::EDGetTokenT<EcalTrigPrimDigiCollection> ecalSrc_;
+	
+		edm::EDGetTokenT<pat::TauCollection> tauToken_;
 
 
 		//initialize run info
@@ -87,36 +96,19 @@ class TauRecoCalib : public edm::EDAnalyzer {
 		vector<float>* phis_;
 
 		//TPG MAX information
-		vector<float> maxTPGPt_;
-		vector<float> maxTPGPt_eta_;
-		vector<float> maxTPGPt_phi_;
-
-		//TPG E information
-		float maxETPGPt;
-		float maxETPGPt_eta;
-		float maxETPGPt_phi;
-
-		//TPG H information
-		float maxHTPGPt;
-		float maxHTPGPt_eta;
-		float maxHTPGPt_phi;
-
-		//TPG information for matching
-		float maxTPGPt;
-		float maxTPGPt_eta;
-		float maxTPGPt_phi;
-
+		vector<float> centralTPGPt_;
+		vector<float> centraleTPGPt_;
+		vector<float> centralhTPGPt_;
 
 		//TPG information
 		vector<float> TPGVeto_; //This determines majority in central TPG
 		vector<int> ptbin_; //This determines majority in central TPG
 
-		vector<int> TPG5x5_;
-		vector<int> TPG5x5_gcteta_;
-		vector<int> TPG5x5_tpgeta_;
-		vector<int> TPG5x5_tpgphi_;
-		vector<int> TPGh5x5_;
-		vector<int> TPGe5x5_;
+		vector<double> TPG5x5_;
+		vector<double> TPG5x5_tpgeta_;
+		vector<double> TPG5x5_tpgphi_;
+		vector<double> TPGh5x5_;
+		vector<double> TPGe5x5_;
 
 		//TPG calibration vectors
 		vector<double> TPGSF1_;
@@ -124,9 +116,9 @@ class TauRecoCalib : public edm::EDAnalyzer {
 
 
 		//calibrated TPGcollections
-		vector<int> cTPG5x5_;
-		vector<int> cTPGh5x5_;
-		vector<int> cTPGe5x5_;
+		vector<double> cTPG5x5_;
+		vector<double> cTPGh5x5_;
+		vector<double> cTPGe5x5_;
 
 
 		//handles
@@ -136,8 +128,6 @@ class TauRecoCalib : public edm::EDAnalyzer {
 		Handle<HcalTrigPrimDigiCollection> hcal;
 
 
-		vector<double> sinPhi;
-		vector<double> cosPhi;
 
 		bool ECALOn;
 		bool v_off;
@@ -184,7 +174,7 @@ namespace {
 
 
 TauRecoCalib::TauRecoCalib(const edm::ParameterSet& pset):
-        tauToken_(consumes<pat::TauCollection>(pset.getParameter<edm::InputTag>("taus"))),
+	tauToken_(consumes<pat::TauCollection>(pset.getParameter<edm::InputTag>("taus"))),
 	eTowerETCode(N_TOWER_PHI, vector<unsigned int>(N_TOWER_ETA)),
 	eCorrTowerETCode(N_TOWER_PHI, vector<unsigned int>(N_TOWER_ETA)),
 	hTowerETCode(N_TOWER_PHI, vector<unsigned int>(N_TOWER_ETA)),
@@ -212,10 +202,13 @@ TauRecoCalib::TauRecoCalib(const edm::ParameterSet& pset):
 
 
 	//TPG5x5
-	tree->Branch("TPG5x5_tpgeta_", "std::vector<int>", &TPG5x5_tpgeta_);
-	tree->Branch("TPG5x5", "std::vector<int>", &TPG5x5_);
-	tree->Branch("TPGh5x5","std::vector<int>", &TPGh5x5_);
-	tree->Branch("TPGe5x5","std::vector<int>", &TPGe5x5_);
+	tree->Branch("TPG5x5_tpgeta_", "std::vector<double>", &TPG5x5_tpgeta_);
+	tree->Branch("TPG5x5", "std::vector<double>", &TPG5x5_);
+	tree->Branch("TPGh5x5","std::vector<double>", &TPGh5x5_);
+	tree->Branch("TPGe5x5","std::vector<double>", &TPGe5x5_);
+	tree->Branch("centralTPGPt","std::vector<double>", &centralTPGPt_);
+	tree->Branch("centraleTPGPt","std::vector<double>", &centraleTPGPt_);
+	tree->Branch("centralhTPGPt","std::vector<double>", &centralhTPGPt_);
 
 	tree->Branch("recoPt", "std::vector<float>", &pts_); //reco eg rct pt
 	tree->Branch("recoDMs", "std::vector<float>", &dms_); //reco eg rct pt
@@ -223,15 +216,14 @@ TauRecoCalib::TauRecoCalib(const edm::ParameterSet& pset):
 	tree->Branch("recoGctPhi", "std::vector<float>", &phis_);//reco phi
 
 	//cTPG5x5
-	tree->Branch("cTPG5x5", "std::vector<int>", &cTPG5x5_);
-	tree->Branch("cTPGh5x5","std::vector<int>", &cTPGh5x5_);
-	tree->Branch("cTPGe5x5","std::vector<int>", &cTPGe5x5_);
+	tree->Branch("cTPG5x5", "std::vector<double>", &cTPG5x5_);
+	tree->Branch("cTPGh5x5","std::vector<double>", &cTPGh5x5_);
+	tree->Branch("cTPGe5x5","std::vector<double>", &cTPGe5x5_);
 
 
 	scalerSrc_ = consumes<std::vector<LumiScalers>>(InputTag("scalersRawToDigi"));
 	pvSrc_ = consumes<std::vector<reco::Vertex>>(InputTag("offlineSlimmedPrimaryVertices"));
 	ecalSrc_ = consumes<edm::SortedCollection<EcalTriggerPrimitiveDigi,edm::StrictWeakOrdering<EcalTriggerPrimitiveDigi> >>(InputTag("ecalDigis:EcalTriggerPrimitives"));
-	//ecalSrc_ = pset.exists("ecalSrc") ? pset.getParameter<InputTag>("ecalSrc"): InputTag("ecalTriggerPrimitiveDigis");
 	hcalSrc_ = consumes<edm::SortedCollection<HcalTriggerPrimitiveDigi,edm::StrictWeakOrdering<HcalTriggerPrimitiveDigi> >>( InputTag("hcalDigis"));
 
 	TPGSF1_= pset.getParameter<vector<double> >("TPGSF1");//calibration tables
@@ -283,13 +275,10 @@ void TauRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 
 	//std::cout<<"Reset maxTPGS"<<std::endl;
 	// TPG TESTING
-	maxTPGPt_.clear();
-	maxTPGPt_eta_.clear();
-	maxTPGPt_phi_.clear();
+	centralTPGPt_.clear();
 
 	//std::cout<<"Reset TPG5x5s"<<std::endl;
 	TPG5x5_.clear();
-	TPG5x5_gcteta_.clear();
 	TPG5x5_tpgeta_.clear();
 	TPG5x5_tpgphi_.clear();
 	TPGh5x5_.clear();
@@ -300,18 +289,6 @@ void TauRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 	cTPG5x5_.clear();
 	cTPGh5x5_.clear();
 	cTPGe5x5_.clear();
-
-
-	//std::cout<<"Reset TPG=0s "<<std::endl;
-	maxHTPGPt=0;
-	maxHTPGPt_eta=0;
-	maxHTPGPt_phi=0;
-	maxETPGPt=0;
-	maxETPGPt_eta=0;
-	maxETPGPt_phi=0;
-	maxTPGPt=0;
-	maxTPGPt_eta=0;
-	maxTPGPt_phi=0;
 
 
 	//std::cout << "TPGS" << std::endl;
@@ -343,8 +320,8 @@ void TauRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 		else if(et<45){etbin=7;}
 		else {etbin=8;}
 		if((!v_off)&&v1) {
-			if ( ieta>27) {alpha = TPGSF1_[etbin*28+(ieta-28)]; std::cout<<"bin used in LUT"<<etbin*28+(ieta-28)<<std::endl} //map 28-55 to 0-27
-			else if ( ieta<28) {alpha = TPGSF1_[etbin*28+abs(ieta-27)]; std::cout<<"bin used in LUT"<<etbin*28+abs(ieta-27)<<std::endl} //map 0-27 to 0-27 (flip order)
+			if ( ieta>27) {alpha = TPGSF1_[etbin*28+(ieta-28)]; std::cout<<"bin used in LUT"<<etbin*28+(ieta-28)<<std::endl;} //map 28-55 to 0-27
+			else if ( ieta<28) {alpha = TPGSF1_[etbin*28+abs(ieta-27)]; std::cout<<"bin used in LUT"<<etbin*28+abs(ieta-27)<<std::endl;} //map 0-27 to 0-27 (flip order)
 		} //v1
 
 		if( et>5) {
@@ -361,36 +338,36 @@ void TauRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 
 	//	std::cout << "HCAL TPGS" << std::endl;
 	ESHandle<CaloTPGTranscoder> decoder;
-	setup.get<CaloTPGRecord>().get(decoder);
+	es.get<CaloTPGRecord>().get(decoder);
 
 	std::unordered_map<int, std::unordered_map<int, double>> new_ets;
 	std::unordered_map<int, std::unordered_map<int, int>> new_counts;
 
 	ESHandle<HcalTrigTowerGeometry> tpd_geo;
-	setup.get<CaloGeometryRecord>().get(tpd_geo);
+	es.get<CaloGeometryRecord>().get(tpd_geo);
 
 	std::map<HcalTrigTowerDetId, HcalTriggerPrimitiveDigi> ttids;
-	for (const auto& digi: *digis) {
+	for (const auto& digi: *hcal) {
 		//	if (digi.id().version() == 1 || digi.id().ieta()>29) continue; //No HF
 		ttids[digi.id()] = digi;
 		HcalTrigTowerDetId id = digi.id();
 		double tp_et_ = decoder->hcaletValue(id, digi.t0());
 		int tp_ieta_ = id.ieta();
 		int tp_iphi_ = id.iphi();
-                std::cout<<" HCAL ieta: "<<tp_ieta_ <<std::endl;
-                if (abs(tp_ieta_)>28) continue; //ignore HF for now in HCAL vecotr 
-                // TPG iEta starts at 0 and goes to 55 for ECAL; FIXME in helpers? Will be different for hcal 
-                // TPG iPhi starts at 1 and goes to 72.  Let's index starting at zero.
-                int ieta = TPGEtaRange(tp_ieta_);//avoid negative eta
-                int iphi =  tp_iphi_-1; //zero index
+		std::cout<<" HCAL ieta: "<<tp_ieta_ <<std::endl;
+		if (abs(tp_ieta_)>28) continue; //ignore HF for now in HCAL vecotr 
+		// TPG iEta starts at 0 and goes to 55 for ECAL; FIXME in helpers? Will be different for hcal 
+		// TPG iPhi starts at 1 and goes to 72.  Let's index starting at zero.
+		int ieta = TPGEtaRange(tp_ieta_);//avoid negative eta
+		int iphi =  tp_iphi_-1; //zero index
 		int tp_eta_ = convertTPGEta(ieta); //FIXME
 		int tp_phi_ = convertTPGPhi(iphi); //CHECKME/FIXME should require zero index
-                hTowerETCode[iphi][ieta] = tp_et_*2; //add "uncompressed et" e.g. divide this by two later for 0.5 GeV precision 
-                hCorrTowerETCode[iphi][ieta] = tp_et_*2; //add "uncompressed et" e.g. divide this by two later for 0.5 GeV precision 
-                if ( ieta<0 ||iphi<0 ||ieta>55){
-                        cout<<"Original iEta: "<< tp_ieta_ <<" is transformed to "<<ieta<<" for saving to vector; Real Eta: "<<tp_eta_<<endl;
-                        cout<<"Original iPhi: "<< tp_iphi_ <<" is transformed to "<<iphi<<" for saving to vector; Real Phi: "<<tp_phi_<<endl;
-                }
+		hTowerETCode[iphi][ieta] = tp_et_*2; //add "uncompressed et" e.g. divide this by two later for 0.5 GeV precision 
+		hCorrTowerETCode[iphi][ieta] = tp_et_*2; //add "uncompressed et" e.g. divide this by two later for 0.5 GeV precision 
+		if ( ieta<0 ||iphi<0 ||ieta>55){
+			cout<<"Original iEta: "<< tp_ieta_ <<" is transformed to "<<ieta<<" for saving to vector; Real Eta: "<<tp_eta_<<endl;
+			cout<<"Original iPhi: "<< tp_iphi_ <<" is transformed to "<<iphi<<" for saving to vector; Real Phi: "<<tp_phi_<<endl;
+		}
 
 	}//end for of hcal digis
 
@@ -402,7 +379,6 @@ void TauRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 	edm::Handle<pat::TauCollection> taus;
 	evt.getByToken(tauToken_, taus);
 	for (const pat::Tau &tau : *taus) {
-		//if (tau.tauID("decayModeFinding")&&abs(tau.eta())<2.3&&tau.tauID("againstMuonTight3")>0.5&&tau.tauID("againstElectronLooseMVA5")>0.5&&(tau.decayMode()==0||tau.decayMode()==10)&&tau.tauID("byCombinedIsolationDeltaBetaCorrRaw3Hits")<2){
 		if (abs(tau.eta())<2.868&&tau.tauID("againstMuonTight3")>0.5&&tau.tauID("againstElectronTightMVA6")>0.5&&(tau.decayMode()!=5&&tau.decayMode()!=6)&&tau.tauID("byCombinedIsolationDeltaBetaCorrRaw3Hits")<2){
 			pts_->push_back(tau.pt());
 			dms_->push_back(tau.decayMode());
@@ -411,27 +387,30 @@ void TauRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 			int tau_ieta_=convertTPGGenEta(tau.eta());
 			int tau_iphi_=convertGenPhi(tau.phi());
 
-			HoE_=0;
-			l1_summed55_=0;
-			sumCorr_=0;
-			l1_summed55_e_=0;
-			sumCorr_e_=0;
-			l1_summed55_h_=0;
-			sumCorr_h_=0;
+			int temp = floor((tau.pt())/5);
+			int ptbin = temp -1;
+			if (ptbin<0) ptbin=0; 
+			else if (ptbin>8) ptbin=8;
+
+ 	
 			//cout<<"TauParticle Pt: "<< pts_ <<" Eta: "<<tau_eta_<<" Phi: "<<tau_phi_<<" iEta: "<<tau_ieta_<<" iPhi: "<<tau_iphi_ <<endl;
 			//iETA NEGATIVE
-			ptbin_=0;
-			double TPGh5x5_=0;
-			double cTPGh5x5_=0;
-			double TPGe5x5_=0;
-			double cTPGe5x5_=0;
-			double TPG5x5_=0;
-			double cTPG5x5_=0;
+			ptbin_.push_back(ptbin);
+			double TPGh5x5=0;
+			double cTPGh5x5=0;
+			double TPGe5x5=0;
+			double cTPGe5x5=0;
+			double TPG5x5=0;
+			double cTPG5x5=0;
+			double chTPG=0;
+			double ceCorrTPG=0;
 
 			for (int j = -2; j < 3; ++j) {//eta
 				for (int k = -2; k < 3; ++k) { //phi
 					int tpgsquarephi= tau_iphi_+k;
 					int tpgsquareeta= tau_ieta_+j;	
+					chTPG +=hTowerETCode[tau_iphi_][tau_ieta_];
+					ceCorrTPG +=eCorrTowerETCode[tau_iphi_][tau_ieta_];
 
 					if (tpgsquarephi==-1) {tpgsquarephi=71;}
 					if (tpgsquarephi==-2) {tpgsquarephi=70;}
@@ -444,127 +423,36 @@ void TauRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 					if (tpgsquarephi==75) {tpgsquarephi=3;}
 					if (tpgsquarephi==76) {tpgsquarephi=4;}
 					if (tpgsquareeta>55 || tpgsquareeta<0) {continue;}//No Eta values beyond FIX ME IN NEXT ITERATION
-					TPGh5x5_ += hTowerETCode[tpgsquarephi][tpgsquareeta];		
-					cTPGh5x5_ += hCorrTowerETCode[tpgsquarephi][tpgsquareeta];		
-					TPGe5x5_ += eTowerETCode[tpgsquarephi][tpgsquareeta];		
-					cTPGe5x5_ += eCorrTowerETCode[tpgsquarephi][tpgsquareeta];		
-					TPG5x5_ += hTowerETCode[tpgsquarephi][tpgsquareeta];	
-					TPG5x5_ += eTowerETCode[tpgsquarephi][tpgsquareeta];	
-					cTPG5x5_ += hCorrTowerETCode[tpgsquarephi][tpgsquareeta];	
-					cTPG5x5_ += eCorrTowerETCode[tpgsquarephi][tpgsquareeta];		
+					TPGh5x5 += hTowerETCode[tpgsquarephi][tpgsquareeta];		
+					cTPGh5x5 += hCorrTowerETCode[tpgsquarephi][tpgsquareeta];		
+					TPGe5x5 += eTowerETCode[tpgsquarephi][tpgsquareeta];		
+					cTPGe5x5 += eCorrTowerETCode[tpgsquarephi][tpgsquareeta];		
+					TPG5x5 += hTowerETCode[tpgsquarephi][tpgsquareeta];	
+					TPG5x5 += eTowerETCode[tpgsquarephi][tpgsquareeta];	
+					cTPG5x5 += hCorrTowerETCode[tpgsquarephi][tpgsquareeta];	
+					cTPG5x5 += eCorrTowerETCode[tpgsquarephi][tpgsquareeta];		
 				}
-			}
+			}//end tpg sum
+			TPG5x5_.push_back(TPG5x5);
+			TPGh5x5_.push_back(TPGh5x5);
+			TPGe5x5_.push_back(TPGe5x5);
+			TPG5x5_tpgeta_.push_back(tau_ieta_);
+			TPG5x5_tpgphi_.push_back(tau_iphi_);
+
+			cTPG5x5_.push_back(cTPG5x5);
+			cTPGh5x5_.push_back(cTPGh5x5);
+			cTPGe5x5_.push_back(cTPGe5x5);
+			TPGVeto_.push_back(TPGh5x5/cTPGe5x5);
+		        centralTPGPt_.push_back(ceCorrTPG+chTPG);
+		        centraleTPGPt_.push_back(ceCorrTPG);
+		        centralhTPGPt_.push_back(chTPG);
+
 		}//end good taus
-	}
+	}//end tau loop
 
 
 
-	if (match==-1){
-		maxTPGPt_.push_back(0);
-		maxTPGPt_eta_.push_back(999);
-		maxTPGPt_phi_.push_back(999);
-	}
-	else {
-		maxTPGPt_.push_back(maxTPGPt);
-		//cout<<"MaxEgTPG: "<<maxETPGPt<<endl;
-		maxTPGPt_eta_.push_back(maxTPGPt_eta);
-		maxTPGPt_phi_.push_back(maxTPGPt_phi);
-	}//end else
-	}//end pts_ loop Matching
-
-	//Tpg5x5 calculation, require maxTPGPt_eta and maxTPGPt_phi
-	//TPGh5x5, TGPe5x5 calculated
-	//Corrected: cTPGe5x5,cTPGh5x5
-	//if maxTPGPt is set for a reco pt object
-	//std::cout<<"TPG5x5 Calculation"<<std::endl;
-	for(size_t i = 0; i < maxTPGPt_.size(); ++i){
-		//std::cout<<"maxPtSize_ "<<maxTPGPt_.size()<<std::endl;
-		//std::cout<<"reco Pt size_ "<<pts_->size()<<std::endl;
-		//std::cout<<"iterator i "<< i <<std::endl;
-		if (maxTPGPt_.at(i)>0){
-			//cout<<"MaxTPG: "<<maxTPGPt_.at(i)<<endl;
-			TPG5x5_gcteta_.push_back(twrEta2RegionEta(maxTPGPt_eta_.at(i)));
-			TPG5x5_tpgeta_.push_back(maxTPGPt_eta_.at(i));
-			TPG5x5_tpgphi_.push_back(maxTPGPt_phi_.at(i));
-			int TPGh5x5=0;
-			int TPGe5x5=0;
-			int TPG5x5=0;
-			int cTPGh5x5=0;
-			int cTPGe5x5=0;
-			int cTPG5x5=0;
-			for (int j = -2; j < 3; ++j) {//}//phi
-				//for (int j = -5; j < 6; ++j) {//}//phi
-				for (int k = -2; k < 3; ++k) {//} //eta
-					//for (int k = -5; k < 6; ++k) { //}//eta
-					//std::cout<<"Inside j k for "<<std::endl;
-					int tpgsquarephi= TPG5x5_tpgphi_.at(i)+j;
-			//std::cout<<"tpgsquarephi "<<tpgsquarephi<< std::endl;
-			int tpgsquareeta= TPG5x5_tpgeta_.at(i)+k;
-			//std::cout<<"tpgsquareeta "<<tpgsquareeta<< std::endl;
-			if (tpgsquarephi==-1) {tpgsquarephi=71;}
-			if (tpgsquarephi==-2) {tpgsquarephi=70;}
-			if (tpgsquarephi==-3) {tpgsquarephi=69;}
-			if (tpgsquarephi==-4) {tpgsquarephi=68;}
-			if (tpgsquarephi==-5) {tpgsquarephi=67;}
-			if (tpgsquarephi==72) {tpgsquarephi=0;}
-			if (tpgsquarephi==73) {tpgsquarephi=1;}
-			if (tpgsquarephi==74) {tpgsquarephi=2;}
-			if (tpgsquarephi==75) {tpgsquarephi=3;}
-			if (tpgsquarephi==76) {tpgsquarephi=4;}
-			if (tpgsquareeta>55 || tpgsquareeta<0) {continue;}//No Eta values beyond
-
-			TPGh5x5+=hTowerETCode[tpgsquarephi][tpgsquareeta];
-			TPGe5x5+=eTowerETCode[tpgsquarephi][tpgsquareeta];
-			TPG5x5+=hTowerETCode[tpgsquarephi][tpgsquareeta];
-			TPG5x5+=eTowerETCode[tpgsquarephi][tpgsquareeta];
-			cTPGh5x5+=hCorrTowerETCode[tpgsquarephi][tpgsquareeta];
-			cTPGe5x5+=eCorrTowerETCode[tpgsquarephi][tpgsquareeta];
-			cTPG5x5+=hCorrTowerETCode[tpgsquarephi][tpgsquareeta];
-			cTPG5x5+=eCorrTowerETCode[tpgsquarephi][tpgsquareeta];
-		}
-	}
-	TPGh5x5_.push_back(TPGh5x5);
-	TPGe5x5_.push_back(TPGe5x5);
-	TPG5x5_.push_back(TPG5x5);
-	cTPGh5x5_.push_back(cTPGh5x5);
-	cTPGe5x5_.push_back(cTPGe5x5);
-	cTPG5x5_.push_back(cTPG5x5);
-}//end if max tpg
-else { 
-	TPGh5x5_.push_back(0);
-	TPGe5x5_.push_back(0);
-	TPG5x5_.push_back(0);
-	cTPG5x5_.push_back(0);
-	cTPGe5x5_.push_back(0);
-	cTPGh5x5_.push_back(0);
-	TPG5x5_gcteta_.push_back(0);
-	TPG5x5_tpgeta_.push_back(0);
-	TPG5x5_tpgphi_.push_back(0);
-
-}
-}//end for
-
-
-//Fill Pt bin
-for(size_t i = 0; i < maxTPGPt_.size(); ++i){
-	if (maxTPGPt_.at(i)>0){
-		TPGVeto_.push_back(maxTPGPt_.at(i)/TPG5x5_.at(i));
-	}
-	else {TPGVeto_.push_back(-1);}
-	if(maxTPGPt_.at(i)<10){ptbin_.push_back(0);}
-	else if(maxTPGPt_.at(i)<15){ptbin_.push_back(1);}
-	else if(maxTPGPt_.at(i)<20){ptbin_.push_back(2);}
-	else if(maxTPGPt_.at(i)<25){ptbin_.push_back(3);}
-	else if(maxTPGPt_.at(i)<30){ptbin_.push_back(4);}
-	else if(maxTPGPt_.at(i)<35){ptbin_.push_back(5);}
-	else if(maxTPGPt_.at(i)<40){ptbin_.push_back(6);}
-	else if(maxTPGPt_.at(i)<45){ptbin_.push_back(7);}
-	else {ptbin_.push_back(8);}
-}
-
-//	std::cout<<"Fill Tree"<<std::endl;
-
-tree->Fill();
+	tree->Fill();
 }
 
 #include "FWCore/Framework/interface/MakerMacros.h"

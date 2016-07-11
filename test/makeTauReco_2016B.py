@@ -43,8 +43,7 @@ process.maxEvents = cms.untracked.PSet(
 )
 
 #secondary files
-from L1Trigger.LauraTriggerTools.Sec_Mu2015D_cfi import secondaryMap
-#from L1Trigger.LauraTriggerTools.Sec_Tau_cfi import secondaryMap
+from L1Trigger.LauraTriggerTools.Sec_Tau_2016B_cfi import secondaryMap
 
 process.source = cms.Source(
     "PoolSource",

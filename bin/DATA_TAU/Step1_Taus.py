@@ -11,7 +11,7 @@ ROOT.gROOT.SetBatch(True)
 ROOT.gStyle.SetOptStat(1011)
 ######## File #########
 if len(argv) < 2:
-   print 'Usage:python pythontest.py RootFile.root SaveLabel[optional]'
+   print 'Usage:python program.py RootFile.root SaveLabel[optional]'
    exit()
 
 infile = argv[1]
@@ -27,7 +27,7 @@ canvas = ROOT.TCanvas("asdf", "adsf", 800, 800)
 if len(argv)>2:
    saveWhere='~/www/Research/'+argv[2]+'_'
 else:
-   saveWhere='~/www/Research/step3'
+   saveWhere='~/www/Research/'
 
 ########### MAke Hist arrays #########
 histos = []
@@ -53,8 +53,10 @@ for event in ntuple:
                  for eta in range(0,56):
                      SF=0.0
                      maxTpgPt = event.TPGVeto[i]*event.TPG5x5[i]
-                     if event.recoPt[i]>0 and event.TPG5x5[i]>0 and event.TPG5x5_tpgeta_[i] == eta and maxTpgPt>5 and event.TPGVeto[i]>.5:
+	    	     if event.TPG5x5[i]>0:
+                        hototal = event.TPGh5x5[i]/event.TPG5x5[i]
                      #if event.recoPt[i]>0 and event.TPG5x5[i]>0 and event.TPG5x5_tpgeta_[i] == eta and maxTpgPt>5:
+                     if event.recoPt[i]>0 and maxTpgPt>5 and event.TPG5x5[i]>0 and event.TPG5x5_tpgeta_[i] == eta and hototal>0.5:
                         reco=event.recoPt[i]
                         tpg=event.cTPGe5x5[i]+event.TPGh5x5[i]
                         SF = reco/tpg
@@ -82,7 +84,7 @@ for ptb in range(0,9):
 
 
 #
-file=ROOT.TFile("outfile_step3.root","RECREATE")
+file=ROOT.TFile("outfile.root","RECREATE")
 file.cd()
 #
 

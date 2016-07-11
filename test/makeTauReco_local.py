@@ -33,7 +33,17 @@ process = cms.Process("L1Digis")
 
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_condDBv2_cff')
 process.GlobalTag.globaltag = '80X_dataRun2_Prompt_v9'
+process.load('Configuration.StandardSequences.Services_cff')
+process.load('SimGeneral.HepPDTESSource.pythiapdt_cfi')
+process.load('FWCore.MessageService.MessageLogger_cfi')
+process.load('Configuration.EventContent.EventContent_cff')
+process.load('Configuration.Geometry.GeometryExtended2016Reco_cff')
+process.load('Configuration.StandardSequences.MagneticField_AutoFromDBCurrent_cff')
 process.load('Configuration.StandardSequences.RawToDigi_Data_cff')
+process.load('Configuration.StandardSequences.EndOfProcess_cff')
+process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_condDBv2_cff')
+
+
 # Load the correct global tag, based on the release
 # UNCOMMENT THIS LINE TO RUN ON SETTINGS FROM THE DATABASE
 # process.es_prefer_GlobalTag = cms.ESPrefer('PoolDBESSource', 'GlobalTag')
@@ -112,6 +122,7 @@ process.tree = cms.EDAnalyzer(
 process.p1 = cms.Path(
     process.ecalDigis*
     process.hcalDigis*
+    process.scalersRawToDigi
 )
 
 

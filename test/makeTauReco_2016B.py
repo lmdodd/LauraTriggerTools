@@ -32,7 +32,7 @@ options.parseArguments()
 process = cms.Process("L1Digis")
 
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_condDBv2_cff')
-process.GlobalTag.globaltag = '76X_dataRun2_v15'
+process.GlobalTag.globaltag = '80X_dataRun2_Prompt_v9'
 process.load('Configuration.StandardSequences.RawToDigi_Data_cff')
 # Load the correct global tag, based on the release
 # UNCOMMENT THIS LINE TO RUN ON SETTINGS FROM THE DATABASE
@@ -63,10 +63,6 @@ process.source.lumisToProcess = LumiList.LumiList(filename = '/afs/cern.ch/cms/C
 
 
 
-# Load emulation and RECO sequences
-process.load("L1Trigger.LauraTriggerTools.emulation_cfi")
-process.load("Configuration.Geometry.GeometryIdeal_cff")
-
 # Read inst. lumi. info from the scalers
 process.load("EventFilter.ScalersRawToDigi.ScalersRawToDigi_cfi")
 process.scalersRawToDigi.scalersInputTag = 'rawDataCollector'
@@ -90,7 +86,7 @@ process.tree = cms.EDAnalyzer(
 
 process.p1 = cms.Path(
     process.ecalDigis*
-    process.emulationSequence*
+    process.hcalDigis*
     process.scalersRawToDigi
 )
 

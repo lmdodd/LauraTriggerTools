@@ -352,7 +352,7 @@ void EGRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 		else {etbin=8;}
 		if((!v_off)&&v1) {
 		     if ( ieta>27) {alpha = TPGSF1_[etbin*28+(ieta-28)];} //map 28-55 to 0-27
-		     else if ( ieta<28) {alpha = TPGSF1_[etbin*28+(ieta-27)];} //map 0-27 to 0-27 (flip order)
+		     else if ( ieta<28) {alpha = TPGSF1_[etbin*28+abs(ieta-27)];} //map 0-27(27-0) to 0-27 (flip order)
                 } //v1
 		eCorrTowerETCode[iphi][ieta] = alpha*et;
 		//std::cout<<"Ecal sf: "<<alpha<<std::endl;
@@ -393,8 +393,8 @@ void EGRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 			else if(energy<45){hetbin=7;}
 			else {hetbin=8;}
 			if ((!v_off)&&v3) {//required to check HCAL performance 
-				if ( hnieta>27) {alpha_h = TPGSFp_[hetbin*28+(ieta-28)];} //1-32 is mapped 28-55 cutting off HF
-				else if (hnieta<28) {alpha_h = TPGSFp_[hetbin*28+(ieta-27)];} //-32--1 is flipped, and mapped 0-27 cutting off HF
+				if ( hnieta>27) {alpha_h = TPGSFp_[hetbin*28+(ieta-28)];} //1-32 is mapped 28-55 cutting off HF-
+				else if (hnieta<28) {alpha_h = TPGSFp_[hetbin*28+abs(ieta-27)];} //-32--1 is flipped, and mapped 0-27 cutting off HF
 			}
 			hCorrTowerETCode[hniphi][hnieta] = alpha_h*energy;
 		}//end if

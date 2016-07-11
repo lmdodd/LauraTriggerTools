@@ -314,6 +314,7 @@ PionCalibrations::analyze(const edm::Event& event, const edm::EventSetup& setup)
 	
 		eTowerETCode[iphi][ieta] = ecalet; //compressed et!!! easily save the et in a vector of ints (divinde by 2 later) 
 		eCorrTowerETCode[iphi][ieta] = ecalet*ecal[ptbin*9+ieta]; //compressed et!!! easily save the et in a vector of ints (divinde by 2 later) 
+		//FIXME
 		Etps_->Fill();
 	}
 

@@ -404,7 +404,7 @@ void pionCalibReco::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 			   */
 			//	double alpha_h = 1; //v1 v2
 			double alpha_h = TPGSFp_[hnieta]; //v3
-			//	double alpha_h2 = TPGSFp1_[hnieta]; //v4-- I can't remember using this! I think this one is turned off
+			//	double alpha_h2 = TPGSFp1_[hnieta]; //v4-- I can't remember using this! turn off
 			//
 			hCorrTowerETCode[hniphi][hnieta] = alpha_h*energy;
 			cTPGH_ += alpha_h*energy;

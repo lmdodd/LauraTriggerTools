@@ -80,11 +80,6 @@ class TauRecoCalib : public edm::EDAnalyzer {
 		float instLumi_;
 
 
-		//L1 EG information
-		vector<float> egCandPt_;
-		vector<float> egCandEta_;
-		vector<float> egCandPhi_;
-
 		//Reco information
 		vector<float>* pts_;
 		vector<float>* dms_;
@@ -227,10 +222,6 @@ TauRecoCalib::TauRecoCalib(const edm::ParameterSet& pset):
 	tree->Branch("recoGctEta", "std::vector<float>", &etas_);//reco eta
 	tree->Branch("recoGctPhi", "std::vector<float>", &phis_);//reco phi
 
-	tree->Branch("l1egPt", "std::vector<float>", &egCandPt_); //reco eg rct pt
-	tree->Branch("l1egEta", "std::vector<float>", &egCandEta_);//rct gct eta?
-	tree->Branch("l1egPhi", "std::vector<float>", &egCandPhi_);//rct gct phi?
-
 	//cTPG5x5
 	tree->Branch("cTPG5x5", "std::vector<int>", &cTPG5x5_);
 	tree->Branch("cTPGh5x5","std::vector<int>", &cTPGh5x5_);
@@ -286,11 +277,6 @@ void TauRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 	etas_->clear();
 	phis_->clear();
 
-	//std::cout<<"Reset EG"<<std::endl;
-	egCandPt_.clear();
-	egCandEta_.clear();
-	egCandPhi_.clear();
-
 	//std::cout<<"Reset TPG helpers"<<std::endl;
 	TPGVeto_.clear();
 	ptbin_.clear();
@@ -328,28 +314,8 @@ void TauRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 	maxTPGPt_phi=0;
 
 
-
-	edm::Handle<pat::TauCollection> taus;
-	evt.getByToken(tauToken_, taus);
-	for (const pat::Tau &tau : *taus) {
-		//if (tau.tauID("decayModeFinding")&&abs(tau.eta())<2.3&&tau.tauID("againstMuonTight3")>0.5&&tau.tauID("againstElectronLooseMVA5")>0.5&&(tau.decayMode()==0||tau.decayMode()==10)&&tau.tauID("byCombinedIsolationDeltaBetaCorrRaw3Hits")<2){
-		if (abs(tau.eta())<3&&tau.tauID("againstMuonTight3")>0.5&&tau.tauID("againstElectronLooseMVA6")>0.5&&(tau.decayMode()!=1&&tau.decayMode()!=6)&&tau.tauID("byCombinedIsolationDeltaBetaCorrRaw3Hits")<2){
-			pts_->push_back(tau.pt());
-			dms_->push_back(tau.decayMode());
-			etas_->push_back(tau.eta());
-			phis_->push_back(tau.phi());
-		}
-	}
-
-	//EG cand vector filling
-	//std::cout<<"L1 EG Cands"<<std::endl;
-		egCandPt_.push_back(-999);
-		egCandEta_.push_back(-999); //should be gctEta?
-		egCandPhi_.push_back(-999); //should be gctPhi?
-
-
 	//std::cout << "TPGS" << std::endl;
-	//std::cout << "ECAL TPGS" << std::endl;
+	std::cout << "ECAL TPGS" << std::endl;
 	//fill ET vector
 	for (size_t i = 0; i < ecal->size(); ++i) {
 		int cal_ieta = (*ecal)[i].id().ieta();
@@ -377,147 +343,133 @@ void TauRecoCalib::analyze(const edm::Event& evt, const edm::EventSetup& es) {
 		else if(et<45){etbin=7;}
 		else {etbin=8;}
 		if((!v_off)&&v1) {
-		     if ( ieta>27) {alpha = TPGSF1_[etbin*28+(ieta-28)];} //map 28-55 to 0-27
-		     else if ( ieta<28) {alpha = TPGSF1_[etbin*28+(ieta-27)];} //map 0-27 to 0-27 (flip order)
-                } //v1
-		//std::cout<<"alpha: "<<alpha<<std::endl;
-		//std::cout<<"E: "<<et<<std::endl;
-		//std::cout<<"ECorr: "<<alpha*et<<std::endl;
+			if ( ieta>27) {alpha = TPGSF1_[etbin*28+(ieta-28)]; std::cout<<"bin used in LUT"<<etbin*28+(ieta-28)<<std::endl} //map 28-55 to 0-27
+			else if ( ieta<28) {alpha = TPGSF1_[etbin*28+abs(ieta-27)]; std::cout<<"bin used in LUT"<<etbin*28+abs(ieta-27)<<std::endl} //map 0-27 to 0-27 (flip order)
+		} //v1
+
+		if( et>5) {
+			std::cout<<"====NEW DIGI ===="<<std::endl;
+			std::cout<<"etbin: "<<etbin<<std::endl;
+			std::cout<<"ieta: "<<ieta<<std::endl;
+			std::cout<<"iphi: "<<iphi<<std::endl;
+			std::cout<<"alpha: "<<alpha<<std::endl;
+			std::cout<<"et: "<<et<<std::endl;
+			std::cout<<"etCorr: "<<alpha*et<<std::endl;
+		}
 		eCorrTowerETCode[iphi][ieta] = alpha*et;
-		//std::cout<<"Ecal sf: "<<alpha<<std::endl;
 	}//end ECAL TPGS
 
 	//	std::cout << "HCAL TPGS" << std::endl;
-	ESHandle<L1CaloHcalScale> hcalScale;
-	es.get<L1CaloHcalScaleRcd>().get(hcalScale);
+	ESHandle<CaloTPGTranscoder> decoder;
+	setup.get<CaloTPGRecord>().get(decoder);
 
-	for (size_t i = 0; i < hcal->size(); ++i) {
-		int ieta = (*hcal)[i].id().ieta();
-                //std::cout<<"HCAL ieta: "<<ieta<<std::endl;
-		int iphi = (*hcal)[i].id().iphi();
-		int hniphi = iphi-1;
-		short absieta = std::abs((*hcal)[i].id().ieta());
-                if (absieta>28) continue;
-                int hnieta = TPGEtaRange(ieta);
-		short zside = (*hcal)[i].id().zside();
+	std::unordered_map<int, std::unordered_map<int, double>> new_ets;
+	std::unordered_map<int, std::unordered_map<int, int>> new_counts;
 
-		if (ieta >= -1000 && ieta <= 1000 &&
-				iphi >= -1000 && ieta <= 1000) {
-			double energy = hcalScale->et(
-					(*hcal)[i].SOI_compressedEt(), absieta, zside);
+	ESHandle<HcalTrigTowerGeometry> tpd_geo;
+	setup.get<CaloGeometryRecord>().get(tpd_geo);
 
-			hTowerETCode[hniphi][hnieta] = energy;
-			//fill corrected tpgs here
-			//hCorrTowerETCode
-			int hetbin=0;
-			double alpha_h=1.0; //v_off, v1 
-			if(energy<10){hetbin=0;}
-			else if(energy<15){hetbin=1;}
-			else if(energy<20){hetbin=2;}
-			else if(energy<25){hetbin=3;}
-			else if(energy<30){hetbin=4;}
-			else if(energy<35){hetbin=5;}
-			else if(energy<40){hetbin=6;}
-			else if(energy<45){hetbin=7;}
-			else {hetbin=8;}
-			if (v3) {//required to check HCAL performance 
-				if ( hnieta>27) {alpha_h = TPGSFp_[hetbin*28+(ieta-28)];} //1-32 is mapped 28-55 cutting off HF
-				else if (hnieta<28) {alpha_h = TPGSFp_[hetbin*28+(ieta-27)];} //-32--1 is flipped, and mapped 0-27 cutting off HF
-			}
-			hCorrTowerETCode[hniphi][hnieta] = alpha_h*energy;
+	std::map<HcalTrigTowerDetId, HcalTriggerPrimitiveDigi> ttids;
+	for (const auto& digi: *digis) {
+		//	if (digi.id().version() == 1 || digi.id().ieta()>29) continue; //No HF
+		ttids[digi.id()] = digi;
+		HcalTrigTowerDetId id = digi.id();
+		double tp_et_ = decoder->hcaletValue(id, digi.t0());
+		int tp_ieta_ = id.ieta();
+		int tp_iphi_ = id.iphi();
+                std::cout<<" HCAL ieta: "<<tp_ieta_ <<std::endl;
+                if (abs(tp_ieta_)>28) continue; //ignore HF for now in HCAL vecotr 
+                // TPG iEta starts at 0 and goes to 55 for ECAL; FIXME in helpers? Will be different for hcal 
+                // TPG iPhi starts at 1 and goes to 72.  Let's index starting at zero.
+                int ieta = TPGEtaRange(tp_ieta_);//avoid negative eta
+                int iphi =  tp_iphi_-1; //zero index
+		int tp_eta_ = convertTPGEta(ieta); //FIXME
+		int tp_phi_ = convertTPGPhi(iphi); //CHECKME/FIXME should require zero index
+                hTowerETCode[iphi][ieta] = tp_et_*2; //add "uncompressed et" e.g. divide this by two later for 0.5 GeV precision 
+                hCorrTowerETCode[iphi][ieta] = tp_et_*2; //add "uncompressed et" e.g. divide this by two later for 0.5 GeV precision 
+                if ( ieta<0 ||iphi<0 ||ieta>55){
+                        cout<<"Original iEta: "<< tp_ieta_ <<" is transformed to "<<ieta<<" for saving to vector; Real Eta: "<<tp_eta_<<endl;
+                        cout<<"Original iPhi: "<< tp_iphi_ <<" is transformed to "<<iphi<<" for saving to vector; Real Phi: "<<tp_phi_<<endl;
+                }
 
-		}//end if
-	}//end HCAL TPGs
+	}//end for of hcal digis
 
 
 	//MATCHING
 	//std::cout << "MATCHING" << std::endl;
 
-	//match tpg to reco eg object
-	for (size_t i = 0; i < pts_->size(); ++i) {
-		double closestDR=10e6;
-		double closestDRET=10e6;
-		int match=-1;
-		if (ECALOn){
-			for (size_t j = 0; j < ecal->size(); ++j) {
-				int cal_ieta = (*ecal)[j].id().ieta();
-				int cal_iphi = (*ecal)[j].id().iphi();
-				int iphi = cal_iphi-1;
-				int ieta = TPGEtaRange(cal_ieta);
-				float phi = convertTPGPhi(iphi); //returns phi
-				float eta = convertTPGEta(ieta);
-				// TPG iPhi starts at 1 and goes to 72.  Let's index starting at zero.
-				// TPG ieta ideal goes from 0-55.
-				//	<<"ieta:"<<ieta<<" cal_ieta:"<< cal_ieta<<" iphi:"<<iphi<<endl;
-				double et= (*ecal)[j].compressedEt()*LSB;
-				//fill corrected tpgs here
-				//eCorrTowerETCode[][]=et*alpha
 
-				double deltaEta=(etas_->at(i) - eta);
-				double deltaPhi=reco::deltaPhi(phis_->at(i),phi);
-				double dR=sqrt( deltaEta*deltaEta + deltaPhi*deltaPhi);
+	edm::Handle<pat::TauCollection> taus;
+	evt.getByToken(tauToken_, taus);
+	for (const pat::Tau &tau : *taus) {
+		//if (tau.tauID("decayModeFinding")&&abs(tau.eta())<2.3&&tau.tauID("againstMuonTight3")>0.5&&tau.tauID("againstElectronLooseMVA5")>0.5&&(tau.decayMode()==0||tau.decayMode()==10)&&tau.tauID("byCombinedIsolationDeltaBetaCorrRaw3Hits")<2){
+		if (abs(tau.eta())<2.868&&tau.tauID("againstMuonTight3")>0.5&&tau.tauID("againstElectronTightMVA6")>0.5&&(tau.decayMode()!=5&&tau.decayMode()!=6)&&tau.tauID("byCombinedIsolationDeltaBetaCorrRaw3Hits")<2){
+			pts_->push_back(tau.pt());
+			dms_->push_back(tau.decayMode());
+			etas_->push_back(tau.eta());
+			phis_->push_back(tau.phi());
+			int tau_ieta_=convertTPGGenEta(tau.eta());
+			int tau_iphi_=convertGenPhi(tau.phi());
 
-				if (dR<.5 && dR<closestDR && pts_->at(i)<90 && fabs(pts_->at(i)-et) < closestDRET) { //require dR<.5, closestDr that
-					closestDRET=abs(pts_->at(i)-et);
-					closestDR= dR;
-					match=j;
-					//maxETPGPt = et;
-					//maxETPGPt_eta = ieta;
-					//maxETPGPt_phi = iphi;
-					maxTPGPt = et;
-					maxTPGPt_eta = ieta;
-					maxTPGPt_phi = iphi;
-				}//end if
-			}//end ecal size
-		}//end ecal on
-		else{ //ECALOn ==false
-			//HCAL SF derivation
-			for (size_t j = 0; j < hcal->size(); ++j) {
-				int cal_ieta = (*hcal)[j].id().ieta();
-				int cal_iphi = (*hcal)[j].id().iphi();
-				int iphi = cal_iphi-1;
-				short absieta = std::abs((*hcal)[j].id().ieta());
-                                if (absieta>28) continue;
-				int ieta = TPGEtaRange(cal_ieta);
-				float phi = convertTPGPhi(iphi); //returns phi
-				float eta = convertTPGEta(ieta);
-				short zside = (*hcal)[j].id().zside();
+			HoE_=0;
+			l1_summed55_=0;
+			sumCorr_=0;
+			l1_summed55_e_=0;
+			sumCorr_e_=0;
+			l1_summed55_h_=0;
+			sumCorr_h_=0;
+			//cout<<"TauParticle Pt: "<< pts_ <<" Eta: "<<tau_eta_<<" Phi: "<<tau_phi_<<" iEta: "<<tau_ieta_<<" iPhi: "<<tau_iphi_ <<endl;
+			//iETA NEGATIVE
+			ptbin_=0;
+			double TPGh5x5_=0;
+			double cTPGh5x5_=0;
+			double TPGe5x5_=0;
+			double cTPGe5x5_=0;
+			double TPG5x5_=0;
+			double cTPG5x5_=0;
 
-				if (ieta >= -1000 && ieta <= 1000 &&
-						iphi >= -1000 && ieta <= 1000) {
-					double et = hcalScale->et(
-							(*hcal)[j].SOI_compressedEt(), absieta, zside); 
+			for (int j = -2; j < 3; ++j) {//eta
+				for (int k = -2; k < 3; ++k) { //phi
+					int tpgsquarephi= tau_iphi_+k;
+					int tpgsquareeta= tau_ieta_+j;	
 
-					double deltaEta=(etas_->at(i) - eta);
-					double deltaPhi=reco::deltaPhi(phis_->at(i),phi);
-					double dR=sqrt( deltaEta*deltaEta + deltaPhi*deltaPhi);
+					if (tpgsquarephi==-1) {tpgsquarephi=71;}
+					if (tpgsquarephi==-2) {tpgsquarephi=70;}
+					if (tpgsquarephi==-3) {tpgsquarephi=69;}
+					if (tpgsquarephi==-4) {tpgsquarephi=68;}
+					if (tpgsquarephi==-5) {tpgsquarephi=67;}
+					if (tpgsquarephi==72) {tpgsquarephi=0;}
+					if (tpgsquarephi==73) {tpgsquarephi=1;}
+					if (tpgsquarephi==74) {tpgsquarephi=2;}
+					if (tpgsquarephi==75) {tpgsquarephi=3;}
+					if (tpgsquarephi==76) {tpgsquarephi=4;}
+					if (tpgsquareeta>55 || tpgsquareeta<0) {continue;}//No Eta values beyond FIX ME IN NEXT ITERATION
+					TPGh5x5_ += hTowerETCode[tpgsquarephi][tpgsquareeta];		
+					cTPGh5x5_ += hCorrTowerETCode[tpgsquarephi][tpgsquareeta];		
+					TPGe5x5_ += eTowerETCode[tpgsquarephi][tpgsquareeta];		
+					cTPGe5x5_ += eCorrTowerETCode[tpgsquarephi][tpgsquareeta];		
+					TPG5x5_ += hTowerETCode[tpgsquarephi][tpgsquareeta];	
+					TPG5x5_ += eTowerETCode[tpgsquarephi][tpgsquareeta];	
+					cTPG5x5_ += hCorrTowerETCode[tpgsquarephi][tpgsquareeta];	
+					cTPG5x5_ += eCorrTowerETCode[tpgsquarephi][tpgsquareeta];		
+				}
+			}
+		}//end good taus
+	}
 
-					if (dR<.5 && dR<closestDR && pts_->at(i)<90 && fabs(pts_->at(i)-et) < closestDRET) { //require dR<.5, closestDr that
-						closestDRET=abs(pts_->at(i)-et);
-						closestDR= dR;
-						match=j;
-						//maxHTPGPt = et;
-						//maxHTPGPt_phi = iphi;
-						//maxHTPGPt_eta = ieta;
-						maxTPGPt = et;
-						maxTPGPt_eta = ieta;
-						maxTPGPt_phi = iphi;
-					}//end if
-				}//end if et in range
-			}//end hcal size
-		} //end !ECALOn
 
-		if (match==-1){
-			maxTPGPt_.push_back(0);
-			maxTPGPt_eta_.push_back(999);
-			maxTPGPt_phi_.push_back(999);
-		}
-		else {
-			maxTPGPt_.push_back(maxTPGPt);
-			//cout<<"MaxEgTPG: "<<maxETPGPt<<endl;
-			maxTPGPt_eta_.push_back(maxTPGPt_eta);
-			maxTPGPt_phi_.push_back(maxTPGPt_phi);
-		}//end else
+
+	if (match==-1){
+		maxTPGPt_.push_back(0);
+		maxTPGPt_eta_.push_back(999);
+		maxTPGPt_phi_.push_back(999);
+	}
+	else {
+		maxTPGPt_.push_back(maxTPGPt);
+		//cout<<"MaxEgTPG: "<<maxETPGPt<<endl;
+		maxTPGPt_eta_.push_back(maxTPGPt_eta);
+		maxTPGPt_phi_.push_back(maxTPGPt_phi);
+	}//end else
 	}//end pts_ loop Matching
 
 	//Tpg5x5 calculation, require maxTPGPt_eta and maxTPGPt_phi
